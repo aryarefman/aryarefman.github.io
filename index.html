@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Farming Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .card-custom {
+      border-left: 6px solid;
+      border-radius: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      height: 120px; /* biar sama tinggi */
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .card-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #222;
+    }
+    .progress {
+      height: 8px;
+    }
+
+    .border-blue { border-color: #007bff; }
+    .border-green { border-color: #28a745; }
+    .border-teal { border-color: #20c997; }
+    .border-yellow { border-color: #ffc107; }
+    .border-red { border-color: #dc3545; }
+    .border-cyan { border-color: #17a2b8; }
+
+    .title-blue { color: #007bff; }
+    .title-green { color: #28a745; }
+    .title-teal { color: #20c997; }
+    .title-yellow { color: #ffc107; }
+    .title-red { color: #dc3545; }
+    .title-cyan { color: #17a2b8; }
+  </style>
+</head>
+<body>
+  <div class="container my-4">
+    <h2 class="fw-bold mb-4">Smart Farming</h2>
+    <div class="row">
+
+      <div class="col-md-3">
+        <div class="card card-custom border-blue">
+          <div class="card-body">
+            <h6 class="card-title title-blue">KELEMBABAN (RH)</h6>
+            <div class="card-value">54 %</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-green">
+          <div class="card-body">
+            <h6 class="card-title title-green">TDS</h6>
+            <div class="card-value">400 ppm</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-teal">
+          <div class="card-body">
+            <h6 class="card-title title-teal">KEKERUHAN (TURBID)</h6>
+            <div class="d-flex align-items-center">
+              <div class="card-value me-2">18 NTU</div>
+              <div class="flex-grow-1">
+                <div class="progress">
+                  <div class="progress-bar bg-info" style="width: 40%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-yellow">
+          <div class="card-body">
+            <h6 class="card-title title-yellow">TEMPERATUR AIR (WTEMP)</h6>
+            <div class="card-value">25 °C</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-red">
+          <div class="card-body">
+            <h6 class="card-title title-red">ALIRAN AIR (WFLOW)</h6>
+            <div class="card-value">34</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-blue">
+          <div class="card-body">
+            <h6 class="card-title title-blue">OKSIGEN TERLARUT</h6>
+            <div class="card-value">10 ppm</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-green">
+          <div class="card-body">
+            <h6 class="card-title title-green">INTENSITAS CAHAYA (LUX)</h6>
+            <div class="card-value">100 Lux</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-cyan">
+          <div class="card-body">
+            <h6 class="card-title title-cyan">TEMPERATUR UDARA (AMTEMP)</h6>
+            <div class="d-flex align-items-center">
+              <div class="card-value me-2">34 °C</div>
+              <div class="flex-grow-1">
+                <div class="progress">
+                  <div class="progress-bar bg-info" style="width: 60%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-yellow">
+          <div class="card-body">
+            <h6 class="card-title title-yellow">EC</h6>
+            <div class="card-value">2</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card card-custom border-red">
+          <div class="card-body">
+            <h6 class="card-title title-red">PH</h6>
+            <div class="card-value">7.1</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
