@@ -8,7 +8,7 @@ export const ACCENTS = {
 };
 
 // drift: sway the hero camera within each loop so near and far layers slide past each other (parallax in a GIF).
-// stars3d: false leaves the sky to the painted backdrop (sky.js), so animated frames stay small.
+// stars3d: false leaves the sky to the page backdrop, so frames stay light.
 export function createWorld({ name, scene, camera, width, height, dark, drift = false, stars3d = true }) {
   const DARK = dark;
   const W = width, H = height;

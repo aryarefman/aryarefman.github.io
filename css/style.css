@@ -26,7 +26,10 @@ em { font-style: normal; }
 :focus-visible { outline: 2px solid var(--decide); outline-offset: 3px; border-radius: 6px; }
 
 /* the sky canvas (js/sky.js) paints the whole descent behind the page */
-.starfield { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.starfield { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; background: #04050d; }
+/* aurora aura: a soft glow at the top edge in the current aurora hue */
+.aura { position: fixed; inset: 0 0 auto 0; height: 55vh; z-index: -1; pointer-events: none; opacity: 0.22; mix-blend-mode: screen;
+  background: radial-gradient(70% 90% at 50% -25%, var(--aura, #3fdf9f) 0%, transparent 70%); transition: background 0.4s; }
 
 /* altimeter: fixed gauge showing the descent */
 .altimeter { position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 25; display: grid; grid-template-columns: auto auto; gap: 6px 12px; align-items: center; pointer-events: none; }
@@ -34,7 +37,7 @@ em { font-style: normal; }
 .alt-value { font-size: 15px; font-weight: 600; color: var(--ink); }
 .alt-name { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
 .alt-track { grid-row: 2; grid-column: 2; width: 2px; height: 160px; background: var(--line); border-radius: 2px; overflow: hidden; }
-.alt-fill { display: block; width: 100%; height: 100%; transform-origin: top; transform: scaleY(0); background: linear-gradient(var(--decide), #6fd0e6, #f5c56b, #ff8a3d); }
+.alt-fill { display: block; width: 100%; height: 100%; transform-origin: top; transform: scaleY(0); background: linear-gradient(#cfd6ff, var(--aura, #3fdf9f) 45%, #2fb8d6 55%, #06243f); }
 .alt-ticks { grid-row: 2; grid-column: 1; list-style: none; height: 160px; display: flex; flex-direction: column; justify-content: space-between; text-align: right; }
 .alt-ticks li { font-size: 0; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--line-strong); transition: background 0.3s, transform 0.3s; }
 .alt-ticks li.on { background: var(--ink); transform: scale(1.2); }
@@ -57,7 +60,7 @@ em { font-style: normal; }
 
 /* progress + nav */
 .progress { position: fixed; inset: 0 0 auto 0; height: 2px; z-index: 40; }
-.progress span { display: block; height: 100%; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, var(--see), var(--defend), var(--decide)); }
+.progress span { display: block; height: 100%; transform-origin: 0 50%; transform: scaleX(0); background: var(--aura, var(--decide)); box-shadow: 0 0 12px var(--aura, transparent); }
 .nav {
   position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 30;
   display: flex; align-items: center; gap: 18px; padding: 7px 7px 7px 18px;

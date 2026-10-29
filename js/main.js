@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createWorld } from "./world.js";
-import { createSky, altitudeAt, STAGES } from "./sky.js";
+import { createBackdrop, metresAt, STAGES } from "./backdrop.js";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -78,10 +78,11 @@ addEventListener("pointermove", (e) => {
   pointer.cx = e.clientX; pointer.cy = e.clientY;
 }, { passive: true });
 
-// ---------- sky: one descent from deep space to the ground (see sky.js) ----------
-// Each section sits at its own altitude; the descent stage `s` interpolates between their positions.
+// ---------- backdrop: one descent from the night sky into the deep sea (see backdrop.js) ----------
+// Each section sits at its own altitude or depth; the stage `s` interpolates between their positions.
 const skyCanvas = document.querySelector(".starfield");
-const sky = createSky(skyCanvas, { reduceMotion });
+let sky = null;
+try { sky = createBackdrop(skyCanvas, { mobile: isMobile(), reduceMotion }); } catch (err) { console.warn("backdrop unavailable", err); }
 const STAGE_ANCHORS = ["#top", "#about", ".pillars", "#work", "#awards", "#experience", "#contact"];
 let anchorY = [];
 function measureStages() {
@@ -102,8 +103,8 @@ const gauge = document.querySelector(".altimeter");
 const gaugeFill = gauge.querySelector(".alt-fill"), gaugeValue = gauge.querySelector(".alt-value"), gaugeName = gauge.querySelector(".alt-name");
 const gaugeTicks = [...gauge.querySelectorAll(".alt-ticks li")];
 function updateGauge(s) {
-  const km = altitudeAt(s);
-  gaugeValue.textContent = km >= 10 ? `${Math.round(km)} km` : km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km * 1000)} m`;
+  const m = metresAt(s), a = Math.abs(m);
+  gaugeValue.textContent = (m < 0 ? "−" : "") + (a >= 1000 ? `${(a / 1000).toFixed(1)} km` : `${Math.round(a)} m`);
   gaugeName.textContent = STAGES[Math.min(6, Math.round(s))].name;
   gaugeFill.style.transform = `scaleY(${(s / 6).toFixed(4)})`;
   gaugeTicks.forEach((li, i) => li.classList.toggle("on", s >= i - 0.5));
@@ -300,7 +301,7 @@ const watcher = new IntersectionObserver((entries) => {
 }, { rootMargin: "120px" });
 stages.forEach((s) => watcher.observe(s.canvas));
 
-function onResize() { sky.build(); measureWork(); measureStages(); stages.forEach((s) => s.resize()); }
+function onResize() { if (sky) sky.resize(); measureWork(); measureStages(); stages.forEach((s) => s.resize()); }
 addEventListener("resize", onResize);
 measureWork();
 measureStages();
@@ -334,7 +335,11 @@ function frame(time) {
   else if (travel) updateWork();
   updateChrome();
   const descent = descentStage();
-  sky.draw(time, descent, scrollY, pointer.x);
+  // the aurora hue drifts with the scroll: green at the top, through cyan, blue and violet, to magenta at the bottom
+  const max = document.documentElement.scrollHeight - innerHeight;
+  const hue = 0.36 + 0.62 * (max > 0 ? scrollY / max : 0);
+  if (sky) sky.draw(time, descent, scrollY, hue, pointer.x);
+  document.documentElement.style.setProperty("--aura", `hsl(${Math.round((hue % 1) * 360)} 80% 62%)`);
   updateGauge(descent);
   updateCursor();
   if (archStage) { updateArchipelago(archStage); if (archStage.active) archStage.render(time); }
