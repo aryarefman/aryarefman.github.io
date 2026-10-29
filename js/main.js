@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { createWorld } from "./world.js";
 import { createBackdrop, metresAt, STAGES } from "./backdrop.js";
+import { dressIslands } from "./dressing.js";
 import Lenis from "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -338,6 +339,7 @@ Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).
 const heroStage = stages.find((s) => s.name === "hero");
 const archStage = stages.find((s) => s.name === "archipelago");
 if (archStage) watcher.unobserve(archStage.canvas); // fixed canvas: visibility comes from the bands
+if (archStage) dressIslands(archStage.camera.userData.isles).catch((e) => console.warn("island assets", e));
 let descentSmooth = 0, lastTime = 0;
 function frame(time) {
   if (lenis) lenis.raf(time);
