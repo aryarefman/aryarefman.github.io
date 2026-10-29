@@ -10,6 +10,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
 body {
   background: var(--bg); color: var(--ink);
   font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 17px; line-height: 1.6;

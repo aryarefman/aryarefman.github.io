@@ -1,12 +1,16 @@
 import * as THREE from "three";
 import { createWorld } from "./world.js";
 import { createBackdrop, metresAt, STAGES } from "./backdrop.js";
+import Lenis from "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const isMobile = () => innerWidth <= 760;
+
+// inertial smooth scrolling for the whole page (native scrolling is kept with reduced motion)
+const lenis = reduceMotion ? null : new Lenis({ lerp: 0.085, smoothWheel: true, wheelMultiplier: 0.9, touchMultiplier: 1.4, anchors: true });
 
 // Each world was composed for the README at a design size; `crop` keeps only the band with the 3D objects
 // (the README draws its labels below them, the site uses HTML instead).
@@ -145,6 +149,7 @@ function updateHero(stage, s) {
 }
 
 // ---------- seasonal islands: each band flies the camera past its island ----------
+const KEY_OFFSET = new THREE.Vector3(4, 8, 5);
 const bands = [...document.querySelectorAll(".season-band")];
 function updateArchipelago(stage) {
   const vh = innerHeight;
@@ -162,6 +167,8 @@ function updateArchipelago(stage) {
   const i = parseInt(best.band.dataset.season, 10), t = best.t;
   // draw only the island in view: four detailed islands with shadows are too heavy to render at once
   stage.camera.userData.isles.forEach((g, k) => { g.visible = k === i; });
+  const key = stage.camera.userData.key, isleG = stage.camera.userData.isles[i];
+  if (key) { key.position.copy(isleG.position).add(KEY_OFFSET); key.target.position.copy(isleG.position); }
   const isle = stage.camera.userData.isles[i].position;
   const cam = stage.camera, d = DESIGN.archipelago;
   // orbit a little while the island rises through the screen (it moves faster than the text: parallax)
@@ -312,6 +319,7 @@ document.querySelectorAll(".slide img").forEach((img) => img.addEventListener("l
 const loader = document.querySelector(".loader");
 const loaderCount = document.querySelector(".loader-count");
 document.body.classList.add("loading");
+if (lenis) lenis.stop();
 const t0 = performance.now();
 const minShow = reduceMotion ? 0 : 900;
 (function tickLoader() {
@@ -323,18 +331,26 @@ Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).
   loaderCount.textContent = "100";
   loader.classList.add("done");
   document.body.classList.remove("loading");
+  if (lenis) lenis.start();
   document.querySelector(".name").classList.add("in");
 });
 
 const heroStage = stages.find((s) => s.name === "hero");
 const archStage = stages.find((s) => s.name === "archipelago");
 if (archStage) watcher.unobserve(archStage.canvas); // fixed canvas: visibility comes from the bands
+let descentSmooth = 0, lastTime = 0;
 function frame(time) {
+  if (lenis) lenis.raf(time);
+  const dt = Math.min(0.1, Math.max(0, (time - lastTime) / 1000)); lastTime = time;
   if (heroStage && heroStage.visible) updateHero(heroStage, reduceMotion ? 0 : sectionProgress(hero));
   if (!reduceMotion) { updateLayers(); updateWork(); }
   else if (travel) updateWork();
   updateChrome();
-  const descent = descentStage();
+  // ease the dive toward the scroll position so the camera glides between layers instead of stepping
+  const target = descentStage();
+  descentSmooth += (target - descentSmooth) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 4.5));
+  if (Math.abs(target - descentSmooth) < 1e-4) descentSmooth = target;
+  const descent = descentSmooth;
   // the aurora hue drifts with the scroll: green at the top, through cyan, blue and violet, to magenta at the bottom
   const max = document.documentElement.scrollHeight - innerHeight;
   const hue = 0.36 + 0.62 * (max > 0 ? scrollY / max : 0);

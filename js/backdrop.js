@@ -5,7 +5,8 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { fishSchool, seaTurtle, anglerfish, submarine, ufo } from "./creatures.js";
+import { submarine, ufo } from "./creatures.js";
+import { fishSchool, seaTurtle, anglerfish } from "./sealife.js";
 
 export const STAGES = [
   { name: "Starry sky", m: 8000 },
@@ -59,7 +60,11 @@ function skyDome(uniforms) {
       uniform float uTime, uHue; uniform int uSteps; uniform vec3 uMoon;
       varying vec3 vDir;
       ${NOISE_GLSL}
-      vec3 auroraCol(float k) { return hsv(fract(uHue + k * 0.18), 0.75 - k * 0.2, 1.0); }
+      vec3 auroraCol(float k, float x) {
+        float h0 = uHue + 0.07 * sin(x * 0.11 + uTime * 0.05);
+        vec3 low = hsv(fract(h0), 0.8, 1.0), mid = hsv(fract(h0 + 0.2 + 0.06 * sin(x * 0.07)), 0.75, 1.0), high = hsv(fract(h0 + 0.55), 0.7, 1.0);
+        return k < 0.45 ? mix(low, mid, k / 0.45) : mix(mid, high, (k - 0.45) / 0.55);
+      }
       vec3 aurora(vec3 rd) {
         vec3 acc = vec3(0);
         if (rd.y < 0.01) return acc;
@@ -71,14 +76,14 @@ function skyDome(uniforms) {
           float d1 = -q.y - 3.4 - wave, d2 = -q.y - 6.8 - wave * 0.7 - 1.2;
           float band = exp(-d1 * d1 * 0.9) + 0.6 * exp(-d2 * d2 * 0.6);
           float rays = pow(fbm3(vec2(q.x * 2.4 + uTime * 0.04, fi * 0.6)), 2.0) * 2.4;
-          acc += auroraCol(fi) * band * rays * (1.0 - fi) * (3.4 / float(uSteps));
+          acc += auroraCol(fi, q.x) * band * rays * (1.0 - fi * 0.7) * (3.6 / float(uSteps));
         }
         return acc * smoothstep(0.01, 0.2, rd.y);
       }
       void main() {
         vec3 rd = normalize(vDir);
         float h = max(rd.y, 0.0);
-        vec3 col = mix(vec3(0.045, 0.05, 0.11), vec3(0.006, 0.008, 0.028), pow(h, 0.45)) + vec3(0.05, 0.04, 0.1) * exp(-h * 9.0);
+        vec3 col = mix(vec3(0.07, 0.045, 0.16), vec3(0.012, 0.01, 0.045), pow(h, 0.45)) + vec3(0.13, 0.05, 0.17) * exp(-h * 8.0);
         vec2 sp = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1.0, 1.0))) * 160.0;
         vec2 cell = floor(sp), f = fract(sp) - 0.5;
         float r = hash(cell);
@@ -219,7 +224,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
-  const scale = mobile ? 0.5 : 0.75;
+  const scale = mobile ? 0.5 : 0.65;
   const scene = new THREE.Scene();
   // a soft studio environment so metal, glass and fish scales have something to reflect
   const envMap = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
@@ -232,13 +237,13 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const normals = new THREE.TextureLoader().load("img/textures/waternormals.jpg", (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
   const water = new Water(new THREE.PlaneGeometry(10000, 10000), {
     textureWidth: mobile ? 256 : 512, textureHeight: mobile ? 256 : 512, waterNormals: normals,
-    sunDirection: MOON.clone(), sunColor: 0xcfd9ff, waterColor: 0x00141f, distortionScale: 3.2, fog: false,
+    sunDirection: MOON.clone(), sunColor: 0xcfd9ff, waterColor: 0x063350, distortionScale: 3.2, fog: false,
   });
   water.rotation.x = -Math.PI / 2; scene.add(water);
   const under = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.ShaderMaterial({
-    uniforms: { uTime: uniforms.uTime, uHue: uniforms.uHue, uCam: { value: new THREE.Vector3() } },
+    uniforms: { uTime: uniforms.uTime, uHue: uniforms.uHue, uCam: { value: new THREE.Vector3() }, uFog: { value: new THREE.Color() } },
     vertexShader: "varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }",
-    fragmentShader: /* glsl */ `uniform float uTime, uHue; uniform vec3 uCam; varying vec3 vW;
+    fragmentShader: /* glsl */ `uniform float uTime, uHue; uniform vec3 uCam, uFog; varying vec3 vW;
       ${NOISE_GLSL}
       void main() {
         vec3 v = normalize(vW - uCam);
@@ -250,8 +255,11 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         vec3 dark = vec3(0.01, 0.06, 0.09) * (0.8 + rip * 0.4);
         float dist = length(vW - uCam);
         vec3 col = mix(dark, bright, window);
-        col = mix(col, vec3(0.02, 0.13, 0.18), 1.0 - exp(-dist * 0.012));
+        // same order as three.js materials: tone map and encode first, then fog, so it matches the background exactly
         gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, uFog, 1.0 - exp(-dist * 0.03));
       }`,
     side: THREE.DoubleSide,
   }));
@@ -266,7 +274,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const clouds = new THREE.Group(); scene.add(clouds);
   let seed = 5; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   for (let i = 0; i < 70; i++) {
-    const m = new THREE.SpriteMaterial({ map: cloudTex[i % 3], color: 0x9aa4c4, transparent: true, depthWrite: false, opacity: 0.85, fog: false });
+    const m = new THREE.SpriteMaterial({ map: cloudTex[i % 3], color: [0xb8a8e0, 0xe4b4d6, 0x9ac8e8, 0xc8c0f0][i % 4], transparent: true, depthWrite: false, opacity: 0.85, fog: false });
     const sp = new THREE.Sprite(m);
     const w = 120 + rnd() * 260; sp.scale.set(w, w * 0.55, 1);
     sp.position.set((rnd() - 0.5) * 900, 140 + rnd() * 140, -60 - rnd() * 700);
@@ -282,7 +290,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       void main() {
         float a = atan(vP.z, vP.x);
         float rays = pow(fbm3(vec2(a * 9.0 + uTime * 0.05, uTime * 0.02)), 3.0) * 3.0;
-        float fade = smoothstep(0.0, 0.25, vUv.y) * vUv.y;                         // bright near the surface
+        float fade = smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.7, vUv.y);   // soft at both ends: no visible rim
         gl_FragColor = vec4(mix(vec3(0.55, 0.8, 0.95), hsv(fract(uHue), 0.5, 1.0), 0.3), rays * fade * 0.22);
       }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
@@ -296,19 +304,20 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({ map: dot, size: 0.35, color: 0xbfd6e0, transparent: true, opacity: 0.55, depthWrite: false, fog: true }));
   scene.add(snow);
 
-  // each depth has its own life: sardines and a sea turtle in the shallows, lanternfish and jellyfish in the
-  // twilight zone, an anglerfish beside the submarine in the abyss
-  const sardines = fishSchool(uniforms, mobile ? 90 : 180, {
-    palette: { back: 0x1d3a4a, flank: 0xb4c6cf, belly: 0xeef3f4, stripe: 0x3f6a7a },
-    path: (q) => new THREE.Vector3(Math.sin(q * 0.11) * 16, -24 + Math.sin(q * 0.17) * 2.2, -34 + Math.cos(q * 0.09) * 7),
+  // each depth has its own life, kept to the right of the text column:
+  // a sardine bait ball and a green sea turtle in the shallows, lanternfish and jellyfish in the twilight zone,
+  // an anglerfish under the submarine's lights in the abyss
+  const sardines = fishSchool(uniforms, mobile ? 70 : 150, "sardine", {
+    hi: !mobile, spread: [5, 3, 5], size: [1.3, 1.8],
+    path: (q) => new THREE.Vector3(13 + Math.cos(q * 0.45) * 6, -25 + Math.sin(q * 0.9) * 1.2, -32 + Math.sin(q * 0.45) * 4),
   });
-  const lantern = fishSchool(uniforms, mobile ? 40 : 80, {
-    palette: { back: 0x0b1018, flank: 0x2a3440, belly: 0x4a5560, stripe: 0x1a2028, fin: 0x1c242c },
-    glow: 0x7fe8ff, size: [0.35, 0.55], spread: [16, 6, 10], beat: 6, metalness: 0.3,
-    path: (q) => new THREE.Vector3(-12 + Math.sin(q * 0.08) * 10, -86 + Math.sin(q * 0.13) * 3, -30 + Math.cos(q * 0.07) * 6),
+  const lantern = fishSchool(uniforms, mobile ? 30 : 60, "lantern", {
+    hi: !mobile, spread: [9, 5, 7], size: [1.0, 1.5], seed: 77,
+    path: (q) => new THREE.Vector3(14 + Math.cos(q * 0.25) * 7, -88 + Math.sin(q * 0.4) * 2, -34 + Math.sin(q * 0.25) * 5),
   });
-  const turtle = seaTurtle(uniforms);
-  const angler = anglerfish(uniforms); angler.position.set(9, -137.5, -16); angler.userData.baseY = -137.5; angler.userData.baseYaw = -0.7; angler.scale.setScalar(1.4);
+  const turtle = seaTurtle(); turtle.scale.setScalar(3.2);
+  const turtlePath = (q) => new THREE.Vector3(24 - ((q * 1.1) % 52), -27 + Math.sin(q * 0.3) * 1.2, -22 + Math.sin(q * 0.15) * 2);
+  const angler = anglerfish(); angler.position.set(11, -136.5, -18); angler.rotation.y = -Math.PI / 2 + 0.5; angler.scale.setScalar(1.7);
   scene.add(sardines, lantern, turtle, angler);
   // a UFO with an alien pilot drifting over the starry sky at the top of the page
   const saucer = ufo(uniforms); saucer.scale.setScalar(15); saucer.userData.setBase(new THREE.Vector3(-120, 1140, -250)); scene.add(saucer);
@@ -329,17 +338,18 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
     }
     floorGeo.computeVertexNormals();
   }
-  const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x6a6455, roughness: 0.95 }));
+  const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x3e3c6e, roughness: 0.95 }));
   floor.position.y = -142; scene.add(floor);
   const glowGeo = new THREE.BufferGeometry(), glowPos = [];
   for (let i = 0; i < 400; i++) glowPos.push((rnd() - 0.5) * 160, -141 + rnd() * 3, -rnd() * 120 + 10);
   glowGeo.setAttribute("position", new THREE.Float32BufferAttribute(glowPos, 3));
   const glowMat = new THREE.PointsMaterial({ map: dot, size: 0.6, color: 0x55ffcc, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const glow = new THREE.Points(glowGeo, glowMat); scene.add(glow);
-  const sub = submarine(uniforms); sub.position.set(12, -133, -30); sub.userData.baseY = -133; sub.rotation.y = 0.4; sub.scale.setScalar(0.85); scene.add(sub);
+  const sub = submarine(uniforms); sub.position.set(3, -129.5, -34); sub.userData.baseY = -129.5; sub.rotation.y = Math.PI - 0.3; sub.scale.setScalar(0.85); scene.add(sub);
 
-  const fog = new THREE.FogExp2(0x0a3a4c, 0.02);
-  const fogStops = [[0, 0x0e4f63, 0.016], [1, 0x07324a, 0.02], [2, 0x041a2c, 0.026], [3, 0x02080f, 0.03]];
+  // fog stays attached for the whole page (density 0 above water): toggling it would recompile every material
+  const fog = new THREE.FogExp2(0x0a3a4c, 0.0); scene.fog = fog;
+  const fogStops = [[0, 0x1b8a9c, 0.014], [1, 0x14609e, 0.018], [2, 0x22308a, 0.022], [3, 0x2a1660, 0.026]];
   const cA = new THREE.Color(), cB = new THREE.Color();
 
   function resize() {
@@ -348,6 +358,22 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
     camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   }
   resize();
+
+  // Objects that carry lights are never hidden: changing the number of lights makes three.js recompile every
+  // shader, which stalls the page mid-scroll. Their meshes are hidden instead and their lights faded to zero.
+  const lit = [sub, angler, saucer];
+  lit.forEach((o) => o.traverse((c) => { if (c.isLight) c.userData.base = c.intensity; }));
+  function show(o, on) {
+    if (o.userData.shown === on) return;
+    o.userData.shown = on;
+    o.traverse((c) => {
+      if (c === o) return;
+      if (c.isLight) c.intensity = on ? c.userData.base : 0;
+      else if (c.isMesh || c.isPoints || c.isLine || c.isSprite) c.visible = on;
+    });
+  }
+  // compile every shader up front (while the loader is showing) so nothing compiles during scrolling
+  renderer.compileAsync(scene, camera).catch(() => {});
 
   const hueColor = new THREE.Color();
   let last = 0;
@@ -362,17 +388,19 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       dome.position.copy(camera.position);
       const above = y > 0;
       dome.visible = water.visible = clouds.visible = above;
-      saucer.visible = y > 300;
-      if (saucer.visible) saucer.userData.update(t);
-      under.visible = shafts.visible = !above;
+      show(saucer, y > 300);
+      if (saucer.userData.shown) saucer.userData.update(t);
+      under.visible = !above;
+      shafts.visible = !above && y > -55;
       snow.visible = !above;
       sardines.visible = turtle.visible = !above && y > -60;
       lantern.visible = !above && y < -40;
-      angler.visible = !above && y < -90;
+      show(angler, !above && y < -90);
       jellies.forEach((j) => (j.visible = !above && y < -30));
-      glow.visible = sub.visible = floor.visible = !above && y < -60;
+      glow.visible = floor.visible = !above && y < -60;
+      show(sub, !above && y < -60);
       if (above) {
-        scene.fog = null; scene.background = null;
+        fog.density = 0; scene.background = null;
         water.material.uniforms.time.value += dt * 0.6;
         moonLight.intensity = 0.9; hemi.intensity = 0.6;
       } else {
@@ -381,14 +409,18 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         cA.setHex(fogStops[i][1]); cB.setHex(fogStops[i + 1][1]); cA.lerp(cB, k);
         fog.color.copy(cA); fog.density = fogStops[i][2] + (fogStops[i + 1][2] - fogStops[i][2]) * k;
         fog.density *= THREE.MathUtils.smoothstep(-y, 0, 10) * 0.85 + 0.15;
-        scene.fog = fog; scene.background = fog.color;
+        scene.background = fog.color;
         under.material.uniforms.uCam.value.copy(camera.position);
+        under.material.uniforms.uFog.value.copy(fog.color).convertLinearToSRGB();   // three.js passes fog and clear colours in output space
         shafts.position.set(camera.position.x, 0, -20);
         hemi.intensity = 0.6 * (1 - d / 3) + 0.08;
         moonLight.intensity = 0.9 * (1 - d / 3);
-        if (sardines.visible) { sardines.userData.update(t); turtle.userData.update(t); }
+        if (sardines.visible) {
+          sardines.userData.update(t);
+          turtle.position.copy(turtlePath(t)); turtle.lookAt(turtlePath(t + 0.5)); turtle.userData.update(t);
+        }
         if (lantern.visible) lantern.userData.update(t);
-        if (angler.visible) angler.userData.update(t, hueColor.setHSL(hue % 1, 0.8, 0.65));
+        if (angler.userData.shown) { angler.userData.update(t, hueColor.setHSL(hue % 1, 0.8, 0.65)); angler.position.y = -136.5 + Math.sin(t * 0.5) * 0.3; }
         jellies.forEach((j, n) => { j.position.y = j.userData.base + Math.sin(t * 0.3 + n) * 1.5; j.rotation.y = t * 0.05 * (n % 2 ? 1 : -1); });
         glowMat.color.setHSL(hue % 1, 0.8, 0.6);
         sub.userData.update(t);
