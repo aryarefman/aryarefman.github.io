@@ -1,12 +1,13 @@
 // The page background is a real 3D scene the camera descends through as you scroll:
 // a night sky with aurora, a cloud deck, a reflective ocean, then underwater past fish and jellyfish
-// down to the seafloor, where a research submarine sweeps the dark with its lights.
+// down to the seafloor, where a jelly humpback whale glides through the dark.
 // `stage` runs 0 → 6: 0 starry sky · 1 aurora · 2 clouds · 3 sea surface · 4 shallow sea · 5 twilight zone · 6 abyss
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { submarine, ufo } from "./creatures.js";
-import { fishSchool, seaTurtle, anglerfish } from "./sealife.js";
+import { ufo } from "./creatures.js";
+import { fishSchool, seaTurtle, jellyWhale, glowReef } from "./sealife.js";
+import { dolphin, sailfish, hammerhead, whaleShark, octopus, jellyfishV2 } from "./menagerie.js";
 
 export const STAGES = [
   { name: "Starry sky", m: 8000 },
@@ -25,7 +26,7 @@ export function metresAt(s) {
 
 // camera height (scene units) and pitch along the descent
 const PATH_Y = [[0, 900], [1, 450], [2, 170], [2.7, 10], [3.3, -8], [4, -28], [5, -82], [6, -131]];
-const PATH_PITCH = [[0, 0.5], [1, 0.26], [2, 0.05], [2.7, -0.03], [3.3, -0.04], [4, -0.06], [5, -0.1], [6, -0.2]];
+const PATH_PITCH = [[0, 0.5], [1, 0.26], [2, 0.05], [2.7, -0.03], [3.3, -0.04], [4, -0.06], [5, -0.1], [6, -0.3]];
 function along(path, s) {
   if (s <= path[0][0]) return path[0][1];
   for (let i = 0; i < path.length - 1; i++) {
@@ -142,83 +143,6 @@ function softDot() {
   return new THREE.CanvasTexture(c);
 }
 
-// ---------- jellyfish: translucent pulsing bell, frilled oral arms and long tentacles ----------
-function jellyfish(uniforms, hueOffset, size, phase) {
-  const group = new THREE.Group();
-  const shared = { uTime: uniforms.uTime, uHue: uniforms.uHue, uOff: { value: hueOffset }, uPhase: { value: phase } };
-  const pulse = /* glsl */ `float pulse(float t) { float c = fract(t * 0.28 + uPhase); return pow(sin(c * 3.14159), 4.0); }`;
-  const bell = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32, 0, Math.PI * 2, 0, Math.PI * 0.56), new THREE.ShaderMaterial({
-    uniforms: shared,
-    vertexShader: /* glsl */ `
-      uniform float uTime, uPhase; varying vec3 vN, vV, vP; ${pulse}
-      void main() {
-        vec3 p = position; float k = pulse(uTime);
-        float rim = 1.0 - clamp(p.y, 0.0, 1.0);
-        p.xz *= 1.0 - 0.16 * k * rim; p.y *= 1.0 + 0.1 * k;
-        p.xz *= 1.0 + 0.03 * sin(atan(p.z, p.x) * 16.0) * rim;          // scalloped margin
-        vP = position; vN = normalize(normalMatrix * normal);
-        vec4 mv = modelViewMatrix * vec4(p, 1.0); vV = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: /* glsl */ `
-      uniform float uHue, uOff, uTime; varying vec3 vN, vV, vP;
-      vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
-      void main() {
-        float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
-        float ang = atan(vP.z, vP.x);
-        float canals = pow(abs(sin(ang * 4.0)), 40.0) * smoothstep(0.1, 0.9, 1.0 - vP.y);
-        float gonads = smoothstep(0.35, 0.0, abs(length(vP.xz) - 0.32)) * smoothstep(0.4, 0.8, vP.y) * pow(abs(sin(ang * 2.0)), 3.0);
-        vec3 c = hsv(fract(uHue + uOff), 0.55, 1.0);
-        vec3 col = c * (0.06 + fres * 1.4 + canals * 0.5) + vec3(1.0, 0.9, 0.95) * gonads * 0.25;
-        gl_FragColor = vec4(col, 0.12 + fres * 0.75 + canals * 0.3);
-      }`,
-    transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
-  }));
-  group.add(bell);
-
-  // tentacles and oral arms as animated lines: attribute `along` 0 at the bell → 1 at the tip
-  const strands = (count, length, radius, wiggle, width) => {
-    const SEG = 40, pos = [], alongA = [], idxA = [];
-    for (let k = 0; k < count; k++) {
-      const a = (k / count) * Math.PI * 2;
-      for (let j = 0; j < SEG; j++) {
-        for (const jj of [j, j + 1]) {
-          const t = jj / SEG;
-          pos.push(Math.cos(a) * radius, -t * length, Math.sin(a) * radius);
-          alongA.push(t); idxA.push(k);
-        }
-      }
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute("along", new THREE.Float32BufferAttribute(alongA, 1));
-    geo.setAttribute("idx", new THREE.Float32BufferAttribute(idxA, 1));
-    return new THREE.LineSegments(geo, new THREE.ShaderMaterial({
-      uniforms: { ...shared, uWiggle: { value: wiggle }, uWidth: { value: width } },
-      vertexShader: /* glsl */ `
-        attribute float along, idx; uniform float uTime, uPhase, uWiggle; varying float vA; ${pulse}
-        void main() {
-          vec3 p = position; float k = pulse(uTime);
-          p.xz *= 1.0 - 0.16 * k * (1.0 - along);
-          p.x += sin(along * 7.0 - uTime * 1.3 + idx * 1.7) * along * uWiggle;
-          p.z += cos(along * 6.0 - uTime * 1.1 + idx * 2.3) * along * uWiggle;
-          p.y += k * along * 0.25;
-          vA = along; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-        }`,
-      fragmentShader: /* glsl */ `
-        uniform float uHue, uOff, uWidth; varying float vA;
-        vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
-        void main() { gl_FragColor = vec4(hsv(fract(uHue + uOff + vA * 0.08), 0.5, 1.0) * uWidth, (1.0 - vA) * 0.8); }`,
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    }));
-  };
-  group.add(strands(28, 7.5, 0.92, 0.8, 0.55));   // fine marginal tentacles
-  group.add(strands(4, 3.2, 0.18, 0.5, 1.2));     // thick oral arms
-  group.add(strands(10, 3.6, 0.28, 0.4, 0.8));
-  group.scale.setScalar(size);
-  return group;
-}
-
 export function createBackdrop(canvas, { mobile = false, reduceMotion = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: "high-performance" });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -281,7 +205,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
     clouds.add(sp);
   }
 
-  // underwater: light shafts, marine snow, fish, jellyfish, seafloor, submarine
+  // underwater: light shafts, marine snow, fish, jellyfish, seafloor, whale
   const shafts = new THREE.Mesh((() => { const gg = new THREE.CylinderGeometry(30, 70, 90, 64, 1, true); gg.translate(0, -45, 0); return gg; })(), new THREE.ShaderMaterial({
     uniforms: { uTime: uniforms.uTime, uHue: uniforms.uHue },
     vertexShader: "varying vec3 vP; varying vec2 vUv; void main() { vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
@@ -306,7 +230,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
 
   // each depth has its own life, kept to the right of the text column:
   // a sardine bait ball and a green sea turtle in the shallows, lanternfish and jellyfish in the twilight zone,
-  // an anglerfish under the submarine's lights in the abyss
+  // a jelly humpback whale gliding through the abyss
   const sardines = fishSchool(uniforms, mobile ? 70 : 150, "sardine", {
     hi: !mobile, spread: [5, 3, 5], size: [1.3, 1.8],
     path: (q) => new THREE.Vector3(13 + Math.cos(q * 0.45) * 6, -25 + Math.sin(q * 0.9) * 1.2, -32 + Math.sin(q * 0.45) * 4),
@@ -317,15 +241,26 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   });
   const turtle = seaTurtle(); turtle.scale.setScalar(3.2);
   const turtlePath = (q) => new THREE.Vector3(24 - ((q * 1.1) % 52), -27 + Math.sin(q * 0.3) * 1.2, -22 + Math.sin(q * 0.15) * 2);
-  const angler = anglerfish(); angler.position.set(11, -136.5, -18); angler.rotation.y = -Math.PI / 2 + 0.5; angler.scale.setScalar(1.7);
-  scene.add(sardines, lantern, turtle, angler);
+  const whale = jellyWhale(uniforms); whale.scale.setScalar(1.6);
+  const whalePath = (q) => new THREE.Vector3(9 + Math.cos(q * 0.06) * 14, -133 + Math.sin(q * 0.12) * 1.2, -40 + Math.sin(q * 0.06) * 8);
+  scene.add(sardines, lantern, turtle, whale);
+  // the reference creatures, one or two per depth, each swimming its own loop on the right of the text column
+  const swimmers = [
+    { o: dolphin(uniforms), s: 2.2, ymin: -12, path: (q) => new THREE.Vector3(18 + Math.cos(q * 0.32) * 9, -9 + Math.sin(q * 0.64) * 2.5, -30 + Math.sin(q * 0.32) * 7) },
+    { o: dolphin(uniforms), s: 2.0, ymin: -12, path: (q) => new THREE.Vector3(18 + Math.cos(q * 0.32 + 0.5) * 10, -10.5 + Math.sin(q * 0.64 + 1) * 2.5, -32 + Math.sin(q * 0.32 + 0.5) * 7) },
+    { o: sailfish(uniforms), s: 2.4, ymin: -50, path: (q) => new THREE.Vector3(14 + Math.cos(q * 0.22) * 12, -40 + Math.sin(q * 0.3) * 2, -30 + Math.sin(q * 0.22) * 6) },
+    { o: hammerhead(uniforms), s: 2.2, ymin: -80, path: (q) => new THREE.Vector3(16 + Math.cos(-q * 0.13) * 12, -66 + Math.sin(q * 0.2) * 2, -36 + Math.sin(-q * 0.13) * 8) },
+    { o: whaleShark(uniforms), s: 2.0, ymin: -110, path: (q) => new THREE.Vector3(12 + Math.cos(q * 0.07) * 16, -96 + Math.sin(q * 0.11) * 2, -50 + Math.sin(q * 0.07) * 10) },
+  ];
+  swimmers.forEach((sw) => { sw.o.scale.setScalar(sw.s); scene.add(sw.o); });
+  const octo = octopus(uniforms); octo.position.set(17, -141.6, -24); octo.rotation.y = -0.5; octo.scale.setScalar(1.6); scene.add(octo);
   // a UFO with an alien pilot drifting over the starry sky at the top of the page
   const saucer = ufo(uniforms); saucer.scale.setScalar(15); saucer.userData.setBase(new THREE.Vector3(-120, 1140, -250)); scene.add(saucer);
 
   const jellies = [
     [20, -60, -34, 2.1, 0.55, 0.0], [26, -76, -44, 1.6, 0.7, 0.3], [16, -90, -28, 1.3, 0.62, 0.55],
     [30, -100, -52, 2.4, 0.8, 0.15], [36, -84, -60, 1.6, 0.5, 0.75], [22, -114, -34, 1.1, 0.9, 0.4],
-  ].map(([x, y, z, s, off, ph]) => { const j = jellyfish(uniforms, off, s, ph); j.position.set(x, y, z); j.userData.base = y; scene.add(j); return j; });
+  ].map(([x, y, z, s, off, ph]) => { const j = jellyfishV2(uniforms, off + ph); j.scale.setScalar(s); j.position.set(x, y, z); j.userData.base = y; scene.add(j); return j; });
 
   const floorGeo = new THREE.PlaneGeometry(500, 500, 160, 160); floorGeo.rotateX(-Math.PI / 2);
   {
@@ -340,12 +275,13 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   }
   const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x3e3c6e, roughness: 0.95 }));
   floor.position.y = -142; scene.add(floor);
+  // the end of the page: a glowing reef on the seafloor
+  const reef = glowReef(uniforms, { centre: new THREE.Vector3(6, -141.2, -26), radius: 12, anemones: mobile ? 12 : 24 }); scene.add(reef);
   const glowGeo = new THREE.BufferGeometry(), glowPos = [];
   for (let i = 0; i < 400; i++) glowPos.push((rnd() - 0.5) * 160, -141 + rnd() * 3, -rnd() * 120 + 10);
   glowGeo.setAttribute("position", new THREE.Float32BufferAttribute(glowPos, 3));
   const glowMat = new THREE.PointsMaterial({ map: dot, size: 0.6, color: 0x55ffcc, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const glow = new THREE.Points(glowGeo, glowMat); scene.add(glow);
-  const sub = submarine(uniforms); sub.position.set(3, -129.5, -34); sub.userData.baseY = -129.5; sub.rotation.y = Math.PI - 0.3; sub.scale.setScalar(0.85); scene.add(sub);
 
   // fog stays attached for the whole page (density 0 above water): toggling it would recompile every material
   const fog = new THREE.FogExp2(0x0a3a4c, 0.0); scene.fog = fog;
@@ -361,7 +297,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
 
   // Objects that carry lights are never hidden: changing the number of lights makes three.js recompile every
   // shader, which stalls the page mid-scroll. Their meshes are hidden instead and their lights faded to zero.
-  const lit = [sub, angler, saucer];
+  const lit = [saucer];
   lit.forEach((o) => o.traverse((c) => { if (c.isLight) c.userData.base = c.intensity; }));
   function show(o, on) {
     if (o.userData.shown === on) return;
@@ -375,7 +311,6 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   // compile every shader up front (while the loader is showing) so nothing compiles during scrolling
   renderer.compileAsync(scene, camera).catch(() => {});
 
-  const hueColor = new THREE.Color();
   let last = 0;
   return {
     resize,
@@ -395,10 +330,12 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       snow.visible = !above;
       sardines.visible = turtle.visible = !above && y > -60;
       lantern.visible = !above && y < -40;
-      show(angler, !above && y < -90);
+      whale.visible = !above && y < -90;
       jellies.forEach((j) => (j.visible = !above && y < -30));
-      glow.visible = floor.visible = !above && y < -60;
-      show(sub, !above && y < -60);
+      swimmers.forEach((sw) => (sw.o.visible = !above && y > sw.ymin - 30 && y < sw.ymin + 40));
+      octo.visible = !above && y < -60;
+      glow.visible = floor.visible = reef.visible = !above && y < -60;
+      reef.userData.light.intensity = !above && y < -60 ? 40 : 0;   // light stays in the scene (constant light count)
       if (above) {
         fog.density = 0; scene.background = null;
         water.material.uniforms.time.value += dt * 0.6;
@@ -420,10 +357,10 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
           turtle.position.copy(turtlePath(t)); turtle.lookAt(turtlePath(t + 0.5)); turtle.userData.update(t);
         }
         if (lantern.visible) lantern.userData.update(t);
-        if (angler.userData.shown) { angler.userData.update(t, hueColor.setHSL(hue % 1, 0.8, 0.65)); angler.position.y = -136.5 + Math.sin(t * 0.5) * 0.3; }
+        if (whale.visible) { whale.position.copy(whalePath(t)); whale.lookAt(whalePath(t + 1)); whale.userData.update(t); }
         jellies.forEach((j, n) => { j.position.y = j.userData.base + Math.sin(t * 0.3 + n) * 1.5; j.rotation.y = t * 0.05 * (n % 2 ? 1 : -1); });
+        swimmers.forEach((sw) => { if (sw.o.visible) { sw.o.position.copy(sw.path(t)); sw.o.lookAt(sw.path(t + 0.3)); } });
         glowMat.color.setHSL(hue % 1, 0.8, 0.6);
-        sub.userData.update(t);
       }
       renderer.render(scene, camera);
     },

@@ -371,99 +371,269 @@ export function seaTurtle() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Humpback anglerfish (Melanocetus): a globular black body, a huge upturned mouth of glassy fangs, a lure.
+// Jelly humpback whale: a translucent blue body over a milky inner belly, swept along a spine from elliptical
+// sections, with throat pleats and a mouth line in rest space, knobbed flippers and notched flukes. It swims with
+// an up-and-down stroke that travels from the chest to the flukes.
 // ---------------------------------------------------------------------------------------------------------------
-export function anglerfish() {
+const WHALE_VERT = /* glsl */ `
+  uniform float uTime;
+  attribute vec2 aBody;            // (u along the body: 0 flukes → 1 snout, part: 0 body · 1 fluke · 2 inner)
+  varying vec3 vN, vV, vRest;
+  varying vec2 vBody;
+  #include <fog_pars_vertex>
+  float stroke(float u) {          // vertical travelling wave, strongest at the flukes
+    float w = pow(clamp(1.0 - u, 0.0, 1.0), 2.2);
+    return 0.42 * w * sin(6.2831 * (0.9 * (1.0 - u)) - uTime * 1.6);
+  }
+  void main() {
+    vec3 p = position;
+    float u = aBody.x;
+    p.y += stroke(u);
+    float slope = (stroke(u + 0.01) - stroke(u - 0.01)) / 0.02 / 9.0;  // body length ≈ 9
+    vec3 n = normalize(vec3(normal.x, normal.y - slope * normal.z, normal.z));
+    vRest = position; vBody = aBody;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vN = normalize(normalMatrix * n); vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+    vec4 mvPosition = mv;
+    #include <fog_vertex>
+  }`;
+
+const WHALE_FRAG = /* glsl */ `
+  uniform float uTime, uHue;
+  varying vec3 vN, vV, vRest;
+  varying vec2 vBody;
+  #include <fog_pars_fragment>
+  vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
+  void main() {
+    vec3 n = normalize(vN), v = normalize(vV);
+    float ndv = abs(dot(n, v));
+    float fres = pow(1.0 - ndv, 2.0);
+    float thick = smoothstep(0.0, 1.0, ndv);                       // looking straight through = more jelly
+    float u = vBody.x;
+    vec3 jelly = mix(vec3(0.06, 0.32, 0.62), vec3(0.02, 0.12, 0.34), thick);   // Beer–Lambert-ish: thicker is deeper blue
+    // throat pleats and the mouth line, drawn in rest space so they ride the motion
+    float belly = smoothstep(0.05, -0.35, vRest.y);
+    float pleats = belly * step(0.62, u) * step(u, 0.97) * smoothstep(0.75, 1.0, abs(sin(vRest.x * 26.0)));
+    float mouth = smoothstep(0.03, 0.0, abs(vRest.y - (-0.05 - (u - 0.85) * 0.9))) * step(0.82, u) * step(u, 0.995);
+    // knobs (tubercles) on the head
+    vec2 kq = vec2(vRest.x * 9.0, vRest.z * 9.0); vec2 kf = fract(kq) - 0.5;
+    float knobs = smoothstep(0.22, 0.1, length(kf)) * step(0.88, u) * smoothstep(0.1, 0.5, vRest.y);
+    vec3 rim = mix(vec3(0.55, 0.85, 1.0), hsv(fract(uHue), 0.6, 1.0), 0.35);
+    vec3 col = jelly + rim * fres * 1.3;
+    col += vec3(0.75, 0.9, 1.0) * (pleats * 0.18 + knobs * 0.25);
+    col *= 1.0 - mouth * 0.6;
+    if (vBody.y > 0.5 && vBody.y < 1.5) col += rim * 0.25;          // thin flukes glow with light passing through
+    // a soft key-light highlight on the wet surface
+    vec3 L = normalize(vec3(0.3, 0.9, 0.4));
+    col += vec3(0.8, 0.9, 1.0) * pow(max(dot(reflect(-L, n), v), 0.0), 40.0) * 0.6;
+    float alpha = clamp(0.28 + fres * 0.65 + pleats * 0.1, 0.0, 0.95);
+    gl_FragColor = vec4(col, alpha);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }`;
+
+const MILK_FRAG = /* glsl */ `
+  uniform float uTime, uHue;
+  varying vec3 vN, vV, vRest;
+  varying vec2 vBody;
+  #include <fog_pars_fragment>
+  void main() {
+    vec3 n = normalize(vN), v = normalize(vV);
+    float ndv = abs(dot(n, v));
+    // the milky layer only shows on the lower body, its upper edge a low wave that becomes the mouth at the head
+    float edge = -0.08 + 0.06 * sin(vRest.z * 2.2) - (vBody.x - 0.5) * 0.12;
+    if (vRest.y > edge) discard;
+    vec3 col = mix(vec3(0.62, 0.78, 0.9), vec3(0.95, 0.98, 1.0), ndv) * 0.85;
+    gl_FragColor = vec4(col, 0.85);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }`;
+
+function whaleBodyGeometry(scaleR = 1) {
+  const NU = 72, NV = 40, L = 9;
+  const pos = [], body = [], idx = [];
+  // profile along the body (u: 0 fluke root → 1 snout): half-height and half-width
+  const H = (u) => (0.18 + 0.92 * Math.pow(Math.sin(Math.PI * Math.min(1, Math.pow(u, 0.75) * 0.98 + 0.02)), 0.85)) * (u > 0.93 ? 1 - (u - 0.93) * 6 : 1);
+  const Wd = (u) => H(u) * (0.55 + 0.55 * THREE.MathUtils.smoothstep(u, 0.08, 0.45)) * 1.05;   // tail stock is narrow and tall
+  for (let i = 0; i <= NU; i++) {
+    const u = i / NU, z = (u - 0.5) * L, h = Math.max(0.02, H(u)) * scaleR, w = Math.max(0.02, Wd(u)) * scaleR;
+    const arch = 0.18 * Math.sin(Math.PI * u) - 0.25 * Math.pow(1 - u, 3);
+    for (let j = 0; j <= NV; j++) {
+      const a = (j / NV) * Math.PI * 2, s = Math.sin(a), c = Math.cos(a);
+      const flat = s < 0 ? 0.78 : 1.0;                                // flatter belly
+      const se = Math.pow(Math.abs(c), 0.8) * Math.sign(c);           // a slightly boxy superellipse section
+      pos.push(w * se, arch + h * s * flat, z);
+      body.push(u, scaleR < 1 ? 2 : 0);
+    }
+  }
+  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
+    const a = i * (NV + 1) + j, b = a + NV + 1;
+    idx.push(a, a + 1, b, a + 1, b + 1, b);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("aBody", new THREE.Float32BufferAttribute(body, 2));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return geo;
+}
+
+function flukeGeometry() {
+  // a flat, swept, notched fluke pair in the xz plane, behind the tail stock
+  const pos = [], body = [], idx = [], NS = 24, NT = 8, L = 9, z0 = -L / 2;
+  for (let i = 0; i <= NS; i++) {
+    const s = (i / NS) * 2 - 1;                                    // -1 left tip → +1 right tip
+    const span = 1.9 * s;
+    const lead = z0 + 0.1 - 0.75 * s * s;                          // leading edge sweeps back to the tips
+    const notch = 0.25 * Math.exp(-Math.pow(s / 0.12, 2));
+    const trail = lead - 0.85 * (1 - Math.pow(Math.abs(s), 1.6)) + notch - 0.05;   // scalloped trailing edge
+    for (let k = 0; k <= NT; k++) {
+      const t = k / NT, z = lead + (trail - lead) * t;
+      const thick = 0.08 * (1 - Math.abs(s)) * Math.sin(Math.PI * t);
+      pos.push(span, -0.02 + thick * 0.5, z);
+      body.push(Math.max(0, (z - z0) / L), 1);
+    }
+  }
+  for (let i = 0; i < NS; i++) for (let k = 0; k < NT; k++) {
+    const a = i * (NT + 1) + k, b = a + NT + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("aBody", new THREE.Float32BufferAttribute(body, 2));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return geo;
+}
+
+function flipperGeometry() {
+  // a long, narrow humpback flipper with a knobbed leading edge (local x outward)
+  const pos = [], body = [], idx = [], NS = 30, NT = 6, len = 3.0;
+  for (let i = 0; i <= NS; i++) {
+    const t = i / NS, x = t * len;
+    const chord = 0.55 * (1 - 0.8 * t) * (0.7 + 0.3 * Math.sin(Math.PI * Math.min(1, t * 1.4)));
+    const knob = 0.05 * Math.max(0, Math.sin(t * 40)) * (1 - t);
+    for (let k = 0; k <= NT; k++) {
+      const c = k / NT, z = 0.25 + knob - c * (chord + knob);
+      pos.push(x, 0.06 * Math.sin(Math.PI * c) * (1 - t), z);
+      body.push(0.72, 1);
+    }
+  }
+  for (let i = 0; i < NS; i++) for (let k = 0; k < NT; k++) {
+    const a = i * (NT + 1) + k, b = a + NT + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("aBody", new THREE.Float32BufferAttribute(body, 2));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  return geo;
+}
+
+export function jellyWhale(uniforms) {
   const g = new THREE.Group();
-  const skin = new THREE.MeshPhysicalMaterial({ color: 0x1c1513, roughness: 0.85, clearcoat: 0.08, sheen: 0.4, sheenColor: new THREE.Color(0x3a2a30), envMapIntensity: 0.25 });
-  skin.onBeforeCompile = (sh) => {
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vAP;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvAP = position;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vAP;\n" + VORONOI)
-      .replace("#include <color_fragment>", `#include <color_fragment>
-        vec3 vo = voronoi(vAP.xy * 7.0 + vAP.z * 4.0);
-        float mott = 0.6 + 0.5 * vo.y;
-        diffuseColor.rgb *= mott * (0.85 + 0.3 * smoothstep(0.0, 0.08, vo.x));
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.32, 0.26, 0.3), smoothstep(0.1, -0.6, vAP.y) * 0.4);`)
-      .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
-        { vec3 vo2 = voronoi(vAP.xy * 22.0 + vAP.z * 9.0); normal = normalize(normal + (vo2.y - 0.5) * 0.25 * vec3(1.0, 1.0, 0.0)); }   // warty skin`);
-  };
-  // body: a lathe of a teardrop laid along z, mouth end (+z) blunt and tall
-  // body: a lathe profile laid along z, left open at the front (the mouth); the lower jaw is pushed forward
-  const R = (t) => 0.18 + 0.82 * Math.sin(Math.PI * t * 0.85);              // t: 0 tail → 1 the open mouth rim
-  const prof = [];
-  for (let i = 0; i <= 40; i++) { const t = i / 40; prof.push(new THREE.Vector2(R(t), t * 2.0 - 1.0)); }
-  const deform = (v) => {                                                   // squash and underbite, shared by body and gape
-    v.x *= 0.85; v.y *= 0.95;
-    const f = THREE.MathUtils.smoothstep(v.z, 0.45, 1.0);
-    if (v.y < 0) v.z += f * 0.32 * (-v.y);                                  // lower jaw juts forward
-    else v.z -= f * 0.1 * v.y;                                             // upper lip sits back
-    v.y += f * 0.12 * (v.y < 0 ? 1 : 0.4);                                  // the gape tilts upward
-    return v;
-  };
-  const bodyGeo = new THREE.LatheGeometry(prof, 72); bodyGeo.rotateX(Math.PI / 2);
-  { const pp = bodyGeo.attributes.position, v = new THREE.Vector3(); for (let i = 0; i < pp.count; i++) { deform(v.fromBufferAttribute(pp, i)); pp.setXYZ(i, v.x, v.y, v.z); } bodyGeo.computeVertexNormals(); }
-  const body = new THREE.Mesh(bodyGeo, skin); g.add(body);
-  // the gape: a deep throat cupped behind the rim, dark red-black inside
-  const rim = [];
-  for (let k = 0; k <= 72; k++) { const a2 = (k / 72) * Math.PI * 2; rim.push(deform(new THREE.Vector3(Math.cos(a2) * R(1), Math.sin(a2) * R(1), 1.0))); }
-  const throatGeo = new THREE.BufferGeometry(), tp = [];
-  const back = new THREE.Vector3(0, -0.05, 0.35);
-  for (let k = 0; k < 72; k++) {
-    const p0 = rim[k], p1 = rim[k + 1], q0 = p0.clone().lerp(back, 0.55), q1 = p1.clone().lerp(back, 0.55);
-    tp.push(...p0.toArray(), ...q0.toArray(), ...p1.toArray(), ...p1.toArray(), ...q0.toArray(), ...q1.toArray());
-    tp.push(...q0.toArray(), ...back.toArray(), ...q1.toArray());
-  }
-  throatGeo.setAttribute("position", new THREE.Float32BufferAttribute(tp, 3)); throatGeo.computeVertexNormals();
-  g.add(new THREE.Mesh(throatGeo, new THREE.MeshStandardMaterial({ color: 0x1a0508, roughness: 0.6, side: THREE.DoubleSide, emissive: 0x120206 })));
-  const lip = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim, true), 96, 0.035, 8, true), skin); g.add(lip);
-  // fangs: long glassy needles on the lower rim, shorter ones above, all curving inward
-  const toothMat = new THREE.MeshPhysicalMaterial({ color: 0xf2efe6, roughness: 0.1, transparent: true, opacity: 0.9, clearcoat: 1, emissive: 0x1a1a18 });
-  const fang = (len) => {
-    const c = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, len * 0.65, 0.03), new THREE.Vector3(0, len, -len * 0.4));
-    const geo = new THREE.TubeGeometry(c, 12, 0.026, 6), pp = geo.attributes.position;
-    for (let i = 0; i < pp.count; i++) { const y = Math.min(1, Math.max(0, pp.getY(i) / len)); pp.setX(i, pp.getX(i) * (1 - y * 0.92)); }
-    geo.computeVertexNormals(); return geo;
-  };
-  const teeth = new THREE.Group(); g.add(teeth);
-  const centre = rim.reduce((acc, v) => acc.add(v), new THREE.Vector3()).multiplyScalar(1 / rim.length);
-  for (let k = 0; k < 72; k += 4) {
-    const v = rim[k], lower = v.y < centre.y, len = (lower ? 0.34 : 0.22) * (0.65 + 0.7 * Math.abs(Math.sin(k * 1.7)));
-    if (Math.abs(v.y - centre.y) < 0.12) continue;                         // no teeth at the corners of the mouth
-    const t = new THREE.Mesh(fang(len), toothMat);
-    t.position.copy(v);
-    const inward = centre.clone().sub(v).normalize();
-    t.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), inward.clone().add(new THREE.Vector3(0, 0, 0.35)).normalize());
-    teeth.add(t);
-  }
-  const jaw = teeth;   // the gape animates the teeth slightly
-  [-1, 1].forEach((s) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 14, 10), new THREE.MeshPhysicalMaterial({ color: 0x8aa098, roughness: 0.05, clearcoat: 1, emissive: 0x0a1a14 }));
-    eye.position.set(s * 0.45, 0.42, 0.55); g.add(eye);
+  const U = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 }, uHue: { value: 0 } }]);
+  U.uTime = uniforms.uTime; U.uHue = uniforms.uHue;
+  const jellyMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: WHALE_VERT, fragmentShader: WHALE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true });
+  const milkMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: WHALE_VERT, fragmentShader: MILK_FRAG, transparent: true, fog: true });
+  const milk = new THREE.Mesh(whaleBodyGeometry(0.86), milkMat); milk.renderOrder = 1; g.add(milk);
+  const body = new THREE.Mesh(whaleBodyGeometry(1), jellyMat); body.renderOrder = 2; g.add(body);
+  const flukes = new THREE.Mesh(flukeGeometry(), jellyMat); flukes.renderOrder = 2; g.add(flukes);
+  const flippers = [-1, 1].map((s) => {
+    const pv = new THREE.Group(); pv.position.set(s * 0.75, -0.45, 1.6); g.add(pv);
+    const f = new THREE.Mesh(flipperGeometry(), jellyMat); f.scale.x = s; f.renderOrder = 2; pv.add(f);
+    return { pv, s };
   });
-  const finMat = new THREE.MeshPhysicalMaterial({ color: 0x2a2028, roughness: 0.6, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-  const fan = (r, ang) => new THREE.Mesh(new THREE.CircleGeometry(r, 24, -ang / 2, ang), finMat);
-  const tail = fan(0.55, 1.4); tail.position.set(0, 0, -1.0); tail.rotation.set(0, Math.PI / 2, Math.PI); g.add(tail);
-  const pecs = [-1, 1].map((s) => { const f = fan(0.38, 1.6); f.position.set(s * 0.72, -0.15, -0.05); f.rotation.set(0, s * (Math.PI / 2 + 0.4), 0); g.add(f); return f; });
-  const dorsal = fan(0.3, 1.2); dorsal.position.set(0, 0.7, -0.5); dorsal.rotation.set(0, Math.PI / 2, Math.PI / 2 + 0.5); g.add(dorsal);
-  // illicium and esca: a translucent bulb with a bright core and trailing filaments
-  const stalk = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0.78, 0.3), new THREE.Vector3(0, 1.4, 0.55), new THREE.Vector3(0, 1.55, 1.15), new THREE.Vector3(0, 1.25, 1.6)]);
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(stalk, 32, 0.022, 8), skin));
-  const esca = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 16), new THREE.MeshPhysicalMaterial({ color: 0x9ff6ff, roughness: 0.1, transparent: true, opacity: 0.85, emissive: 0x6fe8ff, emissiveIntensity: 2.5 }));
-  esca.position.set(0, 1.18, 1.66); g.add(esca);
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffffff })); core.position.copy(esca.position); g.add(core);
-  const haloTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,0.35)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color: 0x8ff6ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  halo.position.copy(esca.position); halo.scale.setScalar(2); g.add(halo);
-  const filaments = new THREE.LineSegments((() => { const pts = []; for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; pts.push(0, 1.12, 1.66, Math.cos(a) * 0.05, 0.95, 1.66 + Math.sin(a) * 0.05); } const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3)); return geo; })(), new THREE.LineBasicMaterial({ color: 0x8ff6ff, transparent: true, opacity: 0.7 }));
-  g.add(filaments);
-  const light = new THREE.PointLight(0x8ff6ff, 8, 7, 1.4); light.position.copy(esca.position); g.add(light);
-  g.userData.update = (t, hueColor) => {
-    const pulse = 0.7 + 0.3 * Math.sin(t * 2.0) + 0.08 * Math.sin(t * 7.3);
-    if (hueColor) { esca.material.emissive.copy(hueColor); halo.material.color.copy(hueColor); light.color.copy(hueColor); filaments.material.color.copy(hueColor); }
-    esca.material.emissiveIntensity = 1.5 + pulse * 2; halo.scale.setScalar(1.6 + pulse * 0.8); light.intensity = 5 + pulse * 5;
-    pecs.forEach((f, i) => (f.rotation.y = (i ? 1 : -1) * (Math.PI / 2 + 0.4 + Math.sin(t * 2.4 + i) * 0.3)));
-    tail.rotation.x = Math.sin(t * 1.4) * 0.35;
-    jaw.rotation.x = -Math.max(0, Math.sin(t * 0.35)) * 0.03;          // a slight breathing gape
+  [-1, 1].forEach((s) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), new THREE.MeshBasicMaterial({ color: 0x06121e }));
+    eye.position.set(s * 0.72, -0.05, 3.25); eye.renderOrder = 3; g.add(eye);
+  });
+  // tiny bubbles trapped in the jelly
+  const bub = [];
+  for (let i = 0; i < 40; i++) { const z = (Math.random() - 0.5) * 6, r = 0.45 * Math.random(); bub.push(Math.cos(i) * r, -0.1 + Math.sin(i * 2.3) * r * 0.6, z); }
+  const bg = new THREE.BufferGeometry(); bg.setAttribute("position", new THREE.Float32BufferAttribute(bub, 3));
+  g.add(new THREE.Points(bg, new THREE.PointsMaterial({ color: 0xdff4ff, size: 0.05, transparent: true, opacity: 0.6, depthWrite: false })));
+  g.userData.update = (t) => {
+    flippers.forEach(({ pv, s }) => pv.rotation.set(-0.15, s * 0.35, s * (-0.55 + 0.18 * Math.sin(t * 0.8))));
+    // the flukes ride the same stroke as the tail stock
+    flukes.position.y = 0;
   };
+  return g;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Bioluminescent reef for the seafloor: anemones whose tentacles sway and glow at the tips, and branching
+// soft corals. One instanced mesh per part, glow colour following the aurora hue.
+// ---------------------------------------------------------------------------------------------------------------
+export function glowReef(uniforms, { centre = new THREE.Vector3(), radius = 10, anemones = 22, seed = 5 } = {}) {
+  const g = new THREE.Group();
+  let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const sway = (mat, strength) => {
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = uniforms.uTime; sh.uniforms.uHue = uniforms.uHue;
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uTime; varying float vH;")
+        .replace("#include <begin_vertex>", `#include <begin_vertex>
+          vH = clamp(position.y, 0.0, 1.0);
+          vec4 wp = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          float ph = wp.x * 0.7 + wp.z * 0.9;
+          transformed.x += sin(uTime * 1.1 + ph) * ${strength.toFixed(2)} * vH * vH;
+          transformed.z += cos(uTime * 0.9 + ph * 1.3) * ${strength.toFixed(2)} * vH * vH;`);
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+          uniform float uTime, uHue; varying float vH;
+          vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }`)
+        .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+          float pulse = 0.75 + 0.25 * sin(uTime * 1.7 + vH * 6.0);
+          totalEmissiveRadiance += hsv(fract(uHue + vH * 0.15), 0.8, 1.0) * (0.15 + pow(vH, 2.0) * 4.0) * pulse;`);
+    };
+    return mat;
+  };
+  // tentacle: a thin tapered tube, 0 at the root → 1 at the tip
+  const tent = new THREE.CylinderGeometry(0.012, 0.035, 1, 6, 6); tent.translate(0, 0.5, 0);
+  const TPER = 14, N = anemones * TPER;
+  const tentacles = new THREE.InstancedMesh(tent, sway(new THREE.MeshStandardMaterial({ color: 0x2a2440, roughness: 0.5 }), 0.18), N);
+  const dummy = new THREE.Object3D(); let n = 0;
+  const discGeo = new THREE.CylinderGeometry(0.22, 0.28, 0.25, 14);
+  const discs = new THREE.InstancedMesh(discGeo, new THREE.MeshStandardMaterial({ color: 0x3a2850, roughness: 0.6, emissive: 0x1a0a30 }), anemones);
+  for (let a = 0; a < anemones; a++) {
+    const ang = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * radius;
+    const base = centre.clone().add(new THREE.Vector3(Math.cos(ang) * d, 0, Math.sin(ang) * d * 0.6));
+    const sc = 0.7 + rnd() * 0.9;
+    dummy.position.copy(base).setY(base.y + 0.1 * sc); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(sc); dummy.updateMatrix(); discs.setMatrixAt(a, dummy.matrix);
+    for (let k = 0; k < TPER; k++) {
+      const ta = (k / TPER) * Math.PI * 2, rr = 0.16 * sc;
+      dummy.position.set(base.x + Math.cos(ta) * rr, base.y + 0.22 * sc, base.z + Math.sin(ta) * rr);
+      dummy.rotation.set(Math.sin(ta) * 0.6, 0, -Math.cos(ta) * 0.6);
+      dummy.scale.set(sc, sc * (0.8 + rnd() * 0.6), sc); dummy.updateMatrix();
+      tentacles.setMatrixAt(n++, dummy.matrix);
+    }
+  }
+  g.add(discs, tentacles);
+  // branching soft corals: a few recursive branch trees merged into one instanced branch shape
+  const branch = new THREE.CylinderGeometry(0.03, 0.06, 1, 6, 4); branch.translate(0, 0.5, 0);
+  const segs = [];
+  const grow = (pos, dir, len, depth) => {
+    segs.push({ pos: pos.clone(), dir: dir.clone(), len, depth });
+    if (depth >= 4) return;
+    const end = pos.clone().addScaledVector(dir, len);
+    for (let k = 0; k < 2; k++) {
+      const nd = dir.clone().applyAxisAngle(new THREE.Vector3(rnd() - 0.5, 0, rnd() - 0.5).normalize(), 0.5 + rnd() * 0.4).normalize();
+      grow(end, nd, len * 0.72, depth + 1);
+    }
+  };
+  for (let c = 0; c < 7; c++) {
+    const ang = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * radius;
+    grow(centre.clone().add(new THREE.Vector3(Math.cos(ang) * d, 0, Math.sin(ang) * d * 0.6)), new THREE.Vector3(0, 1, 0), 1.1 + rnd() * 0.6, 0);
+  }
+  const corals = new THREE.InstancedMesh(branch, sway(new THREE.MeshStandardMaterial({ color: 0x3e2a5a, roughness: 0.55 }), 0.06), segs.length);
+  const up = new THREE.Vector3(0, 1, 0);
+  segs.forEach((sg, i) => {
+    dummy.position.copy(sg.pos); dummy.quaternion.setFromUnitVectors(up, sg.dir);
+    dummy.scale.set(1 - sg.depth * 0.15, sg.len, 1 - sg.depth * 0.15); dummy.updateMatrix(); corals.setMatrixAt(i, dummy.matrix);
+  });
+  g.add(corals);
+  // a soft glow pooled over the reef so it lights the sand
+  const light = new THREE.PointLight(0x8f6bff, 0, 26, 1.6); light.position.copy(centre).add(new THREE.Vector3(0, 3, 0)); g.add(light);
+  g.userData.light = light;
   return g;
 }
