@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createWorld } from "./world.js";
+import { createSky, altitudeAt, STAGES } from "./sky.js";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -34,7 +35,7 @@ class Stage {
     this.name = canvas.dataset.world;
     this.visible = false;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile() ? 1.5 : 2)); // phones: fewer pixels, smoother scrolling
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -77,36 +78,35 @@ addEventListener("pointermove", (e) => {
   pointer.cx = e.clientX; pointer.cy = e.clientY;
 }, { passive: true });
 
-// ---------- starfield: three depth layers drift at different speeds with scroll and pointer ----------
-const sky = document.querySelector(".starfield");
-const skyCtx = sky.getContext("2d");
-let skyLayers = [];
-function buildSky() {
-  const dpr = Math.min(devicePixelRatio, 2);
-  sky.width = innerWidth * dpr; sky.height = innerHeight * dpr;
-  skyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  let s = 42;
-  const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  const area = innerWidth * innerHeight;
-  skyLayers = [[0.04, 0.5, 0.35, area / 2400], [0.12, 0.9, 0.6, area / 7000], [0.28, 1.5, 0.95, area / 26000]].map(([depth, size, alpha, n]) => ({
-    depth, stars: Array.from({ length: Math.round(n) }, () => ({ x: r() * innerWidth, y: r() * innerHeight * 3, size: size * (0.6 + r() * 0.8), alpha: alpha * (0.5 + r() * 0.5), tw: r() * Math.PI * 2, warm: r() > 0.85 })),
-  }));
+// ---------- sky: one descent from deep space to the ground (see sky.js) ----------
+// Each section sits at its own altitude; the descent stage `s` interpolates between their positions.
+const skyCanvas = document.querySelector(".starfield");
+const sky = createSky(skyCanvas, { reduceMotion });
+const STAGE_ANCHORS = ["#top", "#about", ".pillars", "#work", "#awards", "#experience", "#contact"];
+let anchorY = [];
+function measureStages() {
+  anchorY = STAGE_ANCHORS.map((sel, i) => {
+    const el = document.querySelector(sel);
+    if (i === STAGE_ANCHORS.length - 1) return document.documentElement.scrollHeight - innerHeight;
+    return i === 0 ? 0 : el.getBoundingClientRect().top + scrollY - innerHeight * 0.5;
+  });
 }
-function drawSky(time) {
-  const W = innerWidth, H = innerHeight, H3 = H * 3;
-  skyCtx.clearRect(0, 0, W, H);
-  for (const layer of skyLayers) {
-    const oy = scrollY * layer.depth, ox = pointer.x * 30 * layer.depth;
-    for (const st of layer.stars) {
-      const y = ((st.y - oy) % H3 + H3) % H3;
-      if (y > H) continue;
-      const tw = reduceMotion ? 1 : 0.65 + 0.35 * Math.sin(time / 900 + st.tw);
-      skyCtx.globalAlpha = st.alpha * tw;
-      skyCtx.fillStyle = st.warm ? "#ffe1b8" : "#e9e6ff";
-      skyCtx.beginPath(); skyCtx.arc(st.x - ox, y, st.size, 0, Math.PI * 2); skyCtx.fill();
-    }
+function descentStage() {
+  const y = scrollY;
+  for (let i = 0; i < anchorY.length - 1; i++) {
+    if (y < anchorY[i + 1]) return i + clamp((y - anchorY[i]) / Math.max(1, anchorY[i + 1] - anchorY[i]));
   }
-  skyCtx.globalAlpha = 1;
+  return anchorY.length - 1;
+}
+const gauge = document.querySelector(".altimeter");
+const gaugeFill = gauge.querySelector(".alt-fill"), gaugeValue = gauge.querySelector(".alt-value"), gaugeName = gauge.querySelector(".alt-name");
+const gaugeTicks = [...gauge.querySelectorAll(".alt-ticks li")];
+function updateGauge(s) {
+  const km = altitudeAt(s);
+  gaugeValue.textContent = km >= 10 ? `${Math.round(km)} km` : km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km * 1000)} m`;
+  gaugeName.textContent = STAGES[Math.min(6, Math.round(s))].name;
+  gaugeFill.style.transform = `scaleY(${(s / 6).toFixed(4)})`;
+  gaugeTicks.forEach((li, i) => li.classList.toggle("on", s >= i - 0.5));
 }
 
 // ---------- hero: scroll flies the camera around the island ----------
@@ -152,13 +152,15 @@ function updateArchipelago(stage) {
     const r = band.getBoundingClientRect();
     if (r.bottom < 0 || r.top > vh) continue;
     const t = clamp((vh - r.top) / (r.height + vh)); // 0 when the band enters, 1 when it leaves
-    const vis = smooth(0, 0.18, t) * (1 - smooth(0.82, 1, t));
+    const vis = smooth(0.24, 0.4, t) * (1 - smooth(0.62, 0.8, t)); // only while the band fills the view
     if (!best || vis > best.vis) best = { band, t, vis };
   }
   stage.canvas.style.opacity = best ? best.vis.toFixed(3) : "0";
   stage.active = !!best && best.vis > 0.001;
   if (!stage.active) return;
   const i = parseInt(best.band.dataset.season, 10), t = best.t;
+  // draw only the island in view: four detailed islands with shadows are too heavy to render at once
+  stage.camera.userData.isles.forEach((g, k) => { g.visible = k === i; });
   const isle = stage.camera.userData.isles[i].position;
   const cam = stage.camera, d = DESIGN.archipelago;
   // orbit a little while the island rises through the screen (it moves faster than the text: parallax)
@@ -206,7 +208,7 @@ function updateLayers() {
   }
 }
 const bar = document.querySelector(".progress span");
-const navLinks = [...document.querySelectorAll(".nav nav a")];
+const navLinks = [...document.querySelectorAll('.nav nav a[href^="#"]')]; // in-page links only (the CV link is a file)
 function updateChrome() {
   const max = document.documentElement.scrollHeight - innerHeight;
   bar.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
@@ -298,11 +300,11 @@ const watcher = new IntersectionObserver((entries) => {
 }, { rootMargin: "120px" });
 stages.forEach((s) => watcher.observe(s.canvas));
 
-function onResize() { buildSky(); measureWork(); stages.forEach((s) => s.resize()); }
+function onResize() { sky.build(); measureWork(); measureStages(); stages.forEach((s) => s.resize()); }
 addEventListener("resize", onResize);
-buildSky();
 measureWork();
-addEventListener("load", measureWork); // slide images change the track width once they load
+measureStages();
+addEventListener("load", () => { measureWork(); measureStages(); }); // images change the layout once they load
 document.querySelectorAll(".slide img").forEach((img) => img.addEventListener("load", measureWork, { once: true }));
 
 // ---------- loader: count up while fonts and the first frame get ready ----------
@@ -331,7 +333,9 @@ function frame(time) {
   if (!reduceMotion) { updateLayers(); updateWork(); }
   else if (travel) updateWork();
   updateChrome();
-  drawSky(time);
+  const descent = descentStage();
+  sky.draw(time, descent, scrollY, pointer.x);
+  updateGauge(descent);
   updateCursor();
   if (archStage) { updateArchipelago(archStage); if (archStage.active) archStage.render(time); }
   for (const st of stages) if (st.visible && st !== archStage) st.render(time);

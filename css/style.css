@@ -25,16 +25,19 @@ em { font-style: normal; }
 ::selection { background: var(--decide); color: var(--bg); }
 :focus-visible { outline: 2px solid var(--decide); outline-offset: 3px; border-radius: 6px; }
 
-/* space backdrop: nebula + parallax starfield canvas behind everything */
-body::before {
-  content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background:
-    radial-gradient(40% 55% at 80% 20%, rgba(124, 77, 255, 0.22) 0%, transparent 70%),
-    radial-gradient(35% 45% at 10% 80%, rgba(0, 170, 190, 0.14) 0%, transparent 70%),
-    radial-gradient(30% 40% at 15% 10%, rgba(255, 92, 170, 0.10) 0%, transparent 70%),
-    var(--bg);
-}
+/* the sky canvas (js/sky.js) paints the whole descent behind the page */
 .starfield { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+/* altimeter: fixed gauge showing the descent */
+.altimeter { position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 25; display: grid; grid-template-columns: auto auto; gap: 6px 12px; align-items: center; pointer-events: none; }
+.alt-readout { grid-column: 1 / -1; text-align: right; display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 8px; padding: 6px 10px; border-radius: 12px; background: rgba(10, 8, 26, 0.5); border: 1px solid var(--line); backdrop-filter: blur(6px); }
+.alt-value { font-size: 15px; font-weight: 600; color: var(--ink); }
+.alt-name { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.alt-track { grid-row: 2; grid-column: 2; width: 2px; height: 160px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.alt-fill { display: block; width: 100%; height: 100%; transform-origin: top; transform: scaleY(0); background: linear-gradient(var(--decide), #6fd0e6, #f5c56b, #ff8a3d); }
+.alt-ticks { grid-row: 2; grid-column: 1; list-style: none; height: 160px; display: flex; flex-direction: column; justify-content: space-between; text-align: right; }
+.alt-ticks li { font-size: 0; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--line-strong); transition: background 0.3s, transform 0.3s; }
+.alt-ticks li.on { background: var(--ink); transform: scale(1.2); }
 
 /* loader */
 .loader { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; align-content: center; gap: 18px; background: var(--bg); transition: opacity 0.7s var(--ease), visibility 0.7s; }
@@ -206,6 +209,14 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 .work-bar { margin: 0 var(--pad); height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
 .work-bar span { display: block; height: 100%; width: 100%; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, var(--see), var(--defend), var(--decide)); }
 
+/* experience */
+.timeline-x { list-style: none; margin-top: 12px; border-top: 1px solid var(--line); }
+.timeline-x li { display: grid; grid-template-columns: 170px 1fr; gap: 28px; padding: 26px 0; border-bottom: 1px solid var(--line); }
+.timeline-x .when { font-size: 12px; letter-spacing: 0.1em; color: var(--muted); padding-top: 6px; text-transform: uppercase; }
+.timeline-x h3 { font-size: 24px; }
+.timeline-x .org { font-size: 11px; letter-spacing: 0.18em; color: var(--decide); margin: 4px 0 8px; }
+.timeline-x p:not(.org) { color: var(--muted); max-width: 70ch; }
+
 /* teams + research */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 80px); }
 .rows { list-style: none; border-top: 1px solid var(--line); }
@@ -216,9 +227,9 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 .rows i { grid-column: 2; grid-row: 1; font-style: normal; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); align-self: center; white-space: nowrap; }
 
 /* contact */
-.contact { position: relative; min-height: 620px; overflow: hidden; border-top: 1px solid var(--line); }
+.contact { position: relative; min-height: 100vh; min-height: 100svh; overflow: hidden; display: flex; align-items: center; }
 .contact .stage { position: absolute; inset: 0; }
-.contact-copy { position: relative; z-index: 2; padding: 140px var(--pad); max-width: 640px; }
+.contact-copy { position: relative; z-index: 2; padding: 0 var(--pad) 18vh; max-width: 640px; }
 .contact-copy h2 { font-size: clamp(44px, 6vw, 84px); }
 .contact-copy > p:not(.kicker) { color: var(--muted); font-size: 19px; }
 .me { position: absolute; bottom: 0; left: 50%; height: 520px; width: auto; z-index: 1; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5)); will-change: transform; }
@@ -227,7 +238,7 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 .btn:hover { background: var(--line); border-color: var(--decide); }
 .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .btn.primary:hover { background: #fff; }
-.foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 26px var(--pad); font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); background: rgba(5, 5, 15, 0.8); }
+.foot { position: relative; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 26px var(--pad); font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); background: rgba(5, 5, 15, 0.8); }
 
 /* reveal */
 .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); }
@@ -237,8 +248,8 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 /* seasonal island bands: the island itself is drawn on the fixed .archipelago canvas */
 .archipelago { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0; }
 main, .foot { position: relative; z-index: 1; }
-.season-band { position: relative; height: 150vh; display: flex; align-items: center; padding: 0 var(--pad); }
-.season-copy { position: sticky; top: 30vh; max-width: 460px; }
+.season-band { position: relative; height: 110vh; display: flex; align-items: center; padding: 0 var(--pad); }
+.season-copy { position: sticky; top: 30vh; max-width: 480px; padding: 28px 30px; border-radius: var(--radius); background: rgba(10, 8, 26, 0.42); border: 1px solid var(--line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .season-band.right { justify-content: flex-end; }
 .season-copy h2 { font-size: clamp(40px, 5.6vw, 76px); margin: 12px 0 16px; }
 .season-copy > p:not(.kicker) { color: var(--muted); font-size: 18px; }
@@ -264,7 +275,7 @@ main, .foot { position: relative; z-index: 1; }
   body { font-size: 16px; }
   .nav { gap: 6px; padding-left: 14px; }
   .nav nav a { padding: 6px 9px; font-size: 14px; }
-  .nav nav a:nth-child(2) { display: none; }
+  .nav nav a:nth-child(2), .nav nav a:nth-child(4) { display: none; }
   .hero { height: 220vh; }
   .hero-copy { top: 96px; transform: none; right: var(--pad); width: auto; }
   .coords { display: none; }
@@ -274,11 +285,15 @@ main, .foot { position: relative; z-index: 1; }
   .pillar-row { grid-template-columns: 1fr; gap: 28px; }
   .pillars-wrap { aspect-ratio: 1280 / 330; }
   .numbers-wrap { display: none; }
-  .season-band { height: 130vh; align-items: flex-start; }
+  .season-band { height: 100vh; align-items: flex-start; }
   .season-copy { top: 88px; padding-top: 88px; }
   .season-band.right { justify-content: flex-start; }
   .facts div { grid-template-columns: 1fr; gap: 4px; }
-  .contact { min-height: 0; }
+  .timeline-x li { grid-template-columns: 1fr; gap: 6px; }
+  .contact { min-height: 100svh; align-items: flex-start; }
+  .altimeter { right: 10px; top: auto; bottom: 14px; transform: none; }
+  .alt-track, .alt-ticks { display: none; }
+  .alt-readout { margin: 0; padding: 6px 10px; border-radius: 12px; background: rgba(10, 8, 26, 0.6); border: 1px solid var(--line); }
   .contact-copy { padding: 100px var(--pad) 380px; }
   .me { left: auto; right: 2%; height: 360px; }
 }

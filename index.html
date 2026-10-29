@@ -29,6 +29,13 @@
 <canvas class="stage archipelago" data-world="archipelago" aria-hidden="true"></canvas>
 <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
 <div class="progress" aria-hidden="true"><span></span></div>
+<aside class="altimeter mono" aria-hidden="true">
+  <div class="alt-readout"><span class="alt-value">1000 km</span><span class="alt-name">Deep space</span></div>
+  <div class="alt-track"><span class="alt-fill"></span></div>
+  <ol class="alt-ticks">
+    <li>Space</li><li>Orbit · 400 km</li><li>Aurora · 100 km</li><li>Stratosphere · 30 km</li><li>Clouds · 2 km</li><li>Dusk · 500 m</li><li>Surface · 0 m</li>
+  </ol>
+</aside>
 
 <header class="nav">
   <a class="brand mono" href="#top" aria-label="Back to top"><span class="brand-dot"></span>arya.refman</a>
@@ -36,7 +43,8 @@
     <a href="#about">About</a>
     <a href="#work">Work</a>
     <a href="#awards">Awards</a>
-    <a href="#contact" class="nav-cta">Contact</a>
+    <a href="#experience">Experience</a>
+    <a href="cv/Arya-Bisma-Putra-Refman-CV.pdf" class="nav-cta" download>CV ↓</a>
   </nav>
 </header>
 
@@ -61,7 +69,7 @@
         <p class="outro-line">A camera that <span class="t-see">sees</span>, a dome that <span class="t-defend">defends</span>, racks that <span class="t-decide">decide</span>, and rice terraces for the farmers it all serves.</p>
       </div>
       <div class="scroll-hint mono"><span></span>scroll to orbit</div>
-      <p class="coords mono">SURABAYA, ID · 7.28° S 112.79° E</p>
+      <p class="coords mono">ALTITUDE 1000 KM · SCROLL TO LAND</p>
     </div>
   </section>
 
@@ -86,7 +94,8 @@
         <p class="reveal">I study <b>Information Technology at Institut Teknologi Sepuluh Nopember (ITS)</b> in Surabaya, Indonesia. Most of my work is for people under pressure: farmers watching for drought, towns in the path of volcanic ash, refinery crews near red zones, students learning algorithms, and SOC teams facing a flood of packets.</p>
         <p class="reveal">I like closing the loop: systems that <span class="t-see">see</span> what is happening, <span class="t-defend">defend</span> what matters, and help people <span class="t-decide">decide</span> what to do next.</p>
         <dl class="facts reveal">
-          <div><dt class="mono">Now</dt><dd>LLM agent security · JEPA world models · cloud scheduling</dd></div>
+          <div><dt class="mono">Study</dt><dd>Information Technology, ITS · GPA 3.95 / 4.00 · head TA for Data Structures &amp; OOP</dd></div>
+          <div><dt class="mono">Now</dt><dd>AI NLP backend at Hamilku.ID · LLM agent security · JEPA world models</dd></div>
           <div><dt class="mono">Open to</dt><dd>Research collaboration, internships, hackathon teams</dd></div>
         </dl>
       </div>
@@ -130,7 +139,7 @@
     <div class="season-copy">
       <p class="kicker mono" style="color:#ffd27a">SUMMER ISLAND</p>
       <h2>Hackathon season.</h2>
-      <p>From UM Metro and JOINTS UGM to IT Fest UB: long nights, short deadlines, real demos.</p>
+      <p>From Cyberhack and Hulu Migas to JOINTS UGM and IT Fest UB: long nights, short deadlines, real demos.</p>
     </div>
   </section>
 
@@ -166,7 +175,7 @@
         <article class="slide">
           <div class="shot"><img src="img/projects/aromasys.jpg" alt="AromaSys landing page on a laptop with the AromaSys logo" loading="lazy" /></div>
           <div class="slide-copy">
-            <p class="meta mono"><span class="pill gold">🥈 2nd place</span> LEAD DEVELOPER</p>
+            <p class="meta mono"><span class="pill gold">🥈 2nd place</span> CYBERHACK HACKATHON · LEAD DEV</p>
             <h3>AromaSys</h3>
             <p>Warehouse intelligence: a digital-twin floor plan with cold-chain telemetry, Roboflow vision quality control, a Gemini 2.5 Flash operations copilot, RBAC and FIFO expiry tracking.</p>
             <ul class="tags mono"><li>Next.js 16</li><li>Express 5</li><li>PostgreSQL</li><li>Gemini</li></ul>
@@ -176,7 +185,7 @@
         <article class="slide">
           <div class="shot"><img src="img/projects/siews.jpg" alt="SIEWS+ YOLOv8 detection of helmets and safety vests on a monitor, with the S+ logo" loading="lazy" /></div>
           <div class="slide-copy">
-            <p class="meta mono"><span class="pill">🏅 Finalist</span> IOC DIGITAL HACKATHON 2026</p>
+            <p class="meta mono"><span class="pill">🏅 Finalist</span> HACKATHON AI/ML HULU MIGAS 2026</p>
             <h3>SIEWS+ 5.0</h3>
             <p>YOLOv8 on live RTSP streams checks PPE and detects people inside red-zone polygons in under 50 ms per frame, triggers fail-safe shutdown, and alerts over WebSocket and WhatsApp.</p>
             <ul class="tags mono"><li>Python</li><li>FastAPI</li><li>YOLOv8</li><li>OpenCV</li></ul>
@@ -254,24 +263,38 @@
         <span class="award-medal" aria-hidden="true">🥈</span>
         <h3>AromaSys</h3>
         <p>Warehouse intelligence: digital twin, vision QC and an AI operations copilot.</p>
-        <p class="award-event mono">HACKATHON · 2026</p>
+        <p class="award-event mono">CYBERHACK HACKATHON · XTREMAX × UCS ITS</p>
       </a>
       <a class="award reveal" href="https://github.com/aryarefman/migas-siews">
         <span class="award-rank">Final</span>
         <span class="award-medal" aria-hidden="true">🏅</span>
         <h3>SIEWS+ 5.0</h3>
-        <p>YOLOv8 red-zone and PPE detection with fail-safe shutdown for oil and gas.</p>
-        <p class="award-event mono">IOC DIGITAL HACKATHON 2026</p>
+        <p>YOLOv8 personnel, PPE and hazard detection with OCR and face verification for upstream oil and gas.</p>
+        <p class="award-event mono">HACKATHON AI/ML HULU MIGAS 2026 · SKK MIGAS × IOG 4.0</p>
       </a>
       <a class="award reveal" href="https://github.com/aryarefman/analisis-AQI-Dunia">
         <span class="award-rank">Final</span>
         <span class="award-medal" aria-hidden="true">🏅</span>
         <h3>Global AQI analysis</h3>
-        <p>Exploratory and geospatial analysis of world air-quality data.</p>
-        <p class="award-event mono">DATA ANALYTICS COMPETITION</p>
+        <p>PCA, Kruskal-Wallis and K-Means/DBSCAN on world air-quality data.</p>
+        <p class="award-event mono">IMILKOM IT COMPETITION · UNIVERSITAS SUMATERA UTARA</p>
       </a>
     </div>
     <p class="also reveal"><span class="mono">ALSO COMPETED</span> UM Metro Hackathon 2026 · JOINTS UGM 2026 · ForgeHacks Online 2026</p>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section id="experience" class="section experience">
+    <p class="kicker mono reveal">05 · EXPERIENCE &amp; LEADERSHIP</p>
+    <h2 class="reveal">Where I work now</h2>
+    <ol class="timeline-x">
+      <li class="reveal"><span class="when mono">Jun 2026 – now</span><div><h3>AI NLP Backend Specialist</h3><p class="org mono">HAMILKU.ID</p><p>AI backend lead for the patient AI module: API architecture, LLM integration, and predictive models for early detection of pregnancy complications.</p></div></li>
+      <li class="reveal"><span class="when mono">Jul 2026 – now</span><div><h3>Head of IT Dev Division</h3><p class="org mono">ARA 8.0 · ITS</p><p>Leads the developers behind registration, dashboards, the voucher system and the CTFd UI, and keeps sub-division requests on schedule.</p></div></li>
+      <li class="reveal"><span class="when mono">Jun 2026 – now</span><div><h3>Head of Backend Sub Division</h3><p class="org mono">IBL 2K26 · ITS</p><p>RESTful API in Node.js/Express with JWT auth and real-time validation, tuned for registration traffic spikes.</p></div></li>
+      <li class="reveal"><span class="when mono">Oct 2025 – now</span><div><h3>AI Engineer · PIC 3D Printing</h3><p class="org mono">ADMIN LAB KCKS · IT ITS</p><p>Automatic classification of thesis PDFs into AI, IoT, Cyber Security and Cloud; runs the lab's 3D printing service.</p></div></li>
+      <li class="reveal"><span class="when mono">Nov 2025 – now</span><div><h3>IT Helpdesk Assistant</h3><p class="org mono">DIRPAIP · ITS</p><p>Technical support for ITS short courses and learning platforms.</p></div></li>
+      <li class="reveal"><span class="when mono">Current</span><div><h3>Head Teaching Assistant</h3><p class="org mono">DEPT. OF INFORMATION TECHNOLOGY · ITS</p><p>Data Structures &amp; OOP; teaching assistant for Statistics and Calculus 1 &amp; 2.</p></div></li>
+    </ol>
   </section>
 
   <!-- WINTER ISLAND -->
@@ -288,11 +311,11 @@
     <p class="ghost" data-speed="-0.2" aria-hidden="true">TEAMS</p>
     <div class="two-col">
       <div>
-        <p class="kicker mono reveal">05 · TEAMS &amp; ORGANISATIONS</p>
+        <p class="kicker mono reveal">06 · TEAMS &amp; ORGANISATIONS</p>
         <h2 class="reveal">Built with others</h2>
         <ul class="rows">
-          <li class="reveal"><a href="https://ibl-eta.vercel.app"><b>IBL 2K26</b><span>Open-recruitment site for the ITS Basketball League, frontend and backend</span><i>ibl-project ↗</i></a></li>
-          <li class="reveal"><div><b>Website ARA 8.0</b><span>Event website for ARA 8.0 at ITS, built with Next.js; top contributor</span><i>ARenewalAgent-ITS</i></div></li>
+          <li class="reveal"><a href="https://ibl-eta.vercel.app"><b>IBL 2K26</b><span>Head of Backend: open-recruitment site for the ITS Basketball League</span><i>ibl-project ↗</i></a></li>
+          <li class="reveal"><div><b>Website ARA 8.0</b><span>Head of IT Dev Division; top contributor to the Next.js event site</span><i>ARenewalAgent-ITS</i></div></li>
           <li class="reveal"><a href="https://github.com/ITHACKITS/FE-FORGEHACK-2026"><b>Standbai / UdaraSiaga</b><span>Smoke and ash forecasts with household alerts, ForgeHacks Online 2026</span><i>ITHACKITS ↗</i></a></li>
           <li class="reveal"><a href="https://github.com/airenmeyy/kelompok-1-eas-bigdata"><b>KECAMATRAS</b><span>Kecamatan metrics and anomaly tracking for Surabaya; top contributor</span><i>Big Data ↗</i></a></li>
           <li class="reveal"><a href="https://github.com/baboey/fp-tka-1"><b>Order Processing Service</b><span>Cloud deployment with endpoint and Locust load testing; top contributor</span><i>Cloud ↗</i></a></li>
@@ -300,7 +323,7 @@
         </ul>
       </div>
       <div>
-        <p class="kicker mono reveal">06 · RESEARCH &amp; MORE</p>
+        <p class="kicker mono reveal">07 · RESEARCH &amp; MORE</p>
         <h2 class="reveal">Reading &amp; writing</h2>
         <ul class="rows">
           <li class="reveal"><a href="https://github.com/aryarefman/paper"><b>Least-Privilege Guardrails for Multilingual LLM Agents</b><span>A deterministic verifier for over-privileged tool calls in English, Indonesian and Javanese</span><i>Paper ↗</i></a></li>
@@ -315,14 +338,14 @@
 
   <!-- CONTACT -->
   <section id="contact" class="contact">
-    <canvas class="stage" data-world="footer" aria-hidden="true"></canvas>
     <img class="me" src="img/arya-waterfall.webp" alt="Arya smiling in a brown t-shirt" data-speed="0.1" loading="lazy" width="760" height="1264" />
     <div class="contact-copy">
-      <p class="kicker mono">07 · CONTACT</p>
+      <p class="kicker mono">08 · CONTACT</p>
       <h2>Let's build<br />something.</h2>
       <p>Open to research collaboration, internships and hackathon teams.</p>
       <div class="cta">
         <a class="btn primary magnetic" href="mailto:arya445refman@gmail.com">arya445refman@gmail.com</a>
+        <a class="btn magnetic" href="cv/Arya-Bisma-Putra-Refman-CV.pdf" download>Download CV</a>
         <a class="btn magnetic" href="https://www.linkedin.com/in/aryarefman">LinkedIn</a>
         <a class="btn magnetic" href="https://github.com/aryarefman">GitHub</a>
       </div>
