@@ -1,188 +1,251 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Farming Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background-color: #f8f9fa;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .dashboard-title {
-      color: #6c757d;
-      font-size: 28px;
-      font-weight: 400;
-      margin-bottom: 30px;
-    }
-    .card-custom {
-      border-left: 4px solid;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
-      height: 140px;
-      background: white;
-      transition: transform 0.2s ease;
-    }
-    .card-custom:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
-    }
-    .card-title {
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .card-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: #2c3e50;
-      line-height: 1;
-    }
-    .progress {
-      height: 6px;
-      border-radius: 3px;
-      background-color: #e9ecef;
-    }
-    .progress-bar {
-      border-radius: 3px;
-    }
-
-    /* Color schemes */
-    .border-blue { border-left-color: #3b82f6; }
-    .border-green { border-left-color: #10b981; }
-    .border-teal { border-left-color: #06b6d4; }
-    .border-yellow { border-left-color: #f59e0b; }
-    .border-red { border-left-color: #ef4444; }
-
-    .title-blue { color: #3b82f6; }
-    .title-green { color: #10b981; }
-    .title-teal { color: #06b6d4; }
-    .title-yellow { color: #f59e0b; }
-    .title-red { color: #ef4444; }
-
-    .bg-teal { background-color: #06b6d4 !important; }
-    .bg-yellow { background-color: #f59e0b !important; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arya Bisma Putra Refman</title>
+<meta name="description" content="IT student at ITS Surabaya building systems that see, defend and decide: computer vision, cyber defense and distributed systems." />
+<meta property="og:title" content="Arya Bisma Putra Refman" />
+<meta property="og:description" content="Systems that see, defend and decide. Projects, hackathons and research." />
+<meta property="og:image" content="https://aryarefman.github.io/img/og.png" />
+<meta property="og:type" content="website" />
+<meta name="theme-color" content="#0f0c18" />
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<script>
+  // Apply the saved or system theme before first paint.
+  try {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+</script>
 </head>
 <body>
-  <div class="container-fluid px-4 py-4">
-    <h1 class="dashboard-title">Smart Farming</h1>
-    
-    <div class="row mb-3">
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-blue">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-blue">KELEMBABAN (RH)</h6>
-            <div class="card-value">54 %</div>
-          </div>
-        </div>
-      </div>
+<div class="progress" aria-hidden="true"><span></span></div>
 
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-green">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-green">TDS</h6>
-            <div class="card-value">400 ppm</div>
-          </div>
-        </div>
-      </div>
+<header class="nav">
+  <a class="brand mono" href="#top" aria-label="Back to top"><span class="brand-dot"></span>arya.refman</a>
+  <nav aria-label="Sections">
+    <a href="#about">About</a>
+    <a href="#work">Work</a>
+    <a href="#team">Teams</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+    <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" /></svg>
+    <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8Z" /></svg>
+  </button>
+</header>
 
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-teal">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-teal">KEKERUHAN (TURBID)</h6>
-            <div class="d-flex align-items-center">
-              <div class="card-value me-3">18 NTU</div>
-              <div class="flex-grow-1">
-                <div class="progress">
-                  <div class="progress-bar bg-teal" style="width: 35%;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+<main id="top">
+  <!-- HERO: the island stays pinned while scrolling flies the camera around it -->
+  <section class="hero" aria-label="Introduction">
+    <div class="hero-pin">
+      <canvas class="stage" data-world="hero" aria-hidden="true"></canvas>
+      <div class="hero-copy" data-hero-layer="1.6">
+        <p class="hello mono">// hello world, I'm <b>Arya</b></p>
+        <h1 class="name">Arya Bisma<br />Putra Refman</h1>
+        <p class="role">IT student at <em>ITS Surabaya</em>, building systems that <em>see</em>, <em>defend</em> and <em>decide</em>.</p>
+        <div class="chips mono">
+          <span class="chip"><i class="c-see"></i>Computer Vision</span>
+          <span class="chip"><i class="c-defend"></i>Cyber Defense</span>
+          <span class="chip"><i class="c-decide"></i>Distributed Systems</span>
         </div>
+        <p class="now mono"><span class="live-dot"></span>now building <b>Jagapadi</b> · UM Metro Hackathon 2026</p>
       </div>
-
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-yellow">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-yellow">TEMPERATUR AIR (WTEMP)</h6>
-            <div class="card-value">25 °C</div>
-          </div>
-        </div>
+      <div class="hero-scrim" aria-hidden="true"></div>
+      <div class="hero-outro" data-hero-outro>
+        <p class="mono kicker">THE ISLAND</p>
+        <p class="outro-line">A camera that <span class="t-see">sees</span>, a dome that <span class="t-defend">defends</span>, racks that <span class="t-decide">decide</span>, and rice terraces for the farmers it all serves.</p>
       </div>
-
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-red">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-red">ALIRAN AIR (WFLOW)</h6>
-            <div class="card-value">34</div>
-          </div>
-        </div>
-      </div>
+      <div class="scroll-hint mono" data-hero-layer="2.2"><span></span>scroll</div>
+      <p class="coords mono">SURABAYA, ID · 7.28° S 112.79° E</p>
     </div>
+  </section>
 
-    <div class="row">
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-blue">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-blue">OKSIGEN TERLARUT</h6>
-            <div class="card-title" style="font-size: 10px; color: #6c757d;">(DISS.OXYGEN)</div>
-            <div class="card-value">10 ppm</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-green">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-green">INTENSITAS CAHAYA (LUX)</h6>
-            <div class="card-value">100 Lux</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-teal">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-teal">TEMPERATUR UDARA</h6>
-            <div class="card-title" style="font-size: 10px; color: #6c757d;">(AMTEMP)</div>
-            <div class="d-flex align-items-center">
-              <div class="card-value me-3">34 °C</div>
-              <div class="flex-grow-1">
-                <div class="progress">
-                  <div class="progress-bar bg-teal" style="width: 55%;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-yellow">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-yellow">EC</h6>
-            <div class="card-value">2</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card card-custom border-red">
-          <div class="card-body d-flex flex-column justify-content-center">
-            <h6 class="card-title title-red">PH</h6>
-            <div class="card-value">7.1</div>
-          </div>
-        </div>
-      </div>
+  <div class="marquee mono" aria-hidden="true">
+    <div class="marquee-track">
+      <span>YOLOv8</span><span>Wazuh SIEM</span><span>Shuffle SOAR</span><span>gRPC</span><span>FastAPI</span><span>Next.js</span><span>Three.js</span><span>Sentinel-1/2</span><span>PyTorch</span><span>OpenCV</span><span>PostgreSQL</span><span>Docker</span><span>LLM agents</span><span>CloudSim Plus</span>
+      <span>YOLOv8</span><span>Wazuh SIEM</span><span>Shuffle SOAR</span><span>gRPC</span><span>FastAPI</span><span>Next.js</span><span>Three.js</span><span>Sentinel-1/2</span><span>PyTorch</span><span>OpenCV</span><span>PostgreSQL</span><span>Docker</span><span>LLM agents</span><span>CloudSim Plus</span>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- ABOUT -->
+  <section id="about" class="section about">
+    <p class="ghost" data-speed="-0.25" aria-hidden="true">ABOUT</p>
+    <div class="about-grid">
+      <figure class="photo reveal">
+        <div class="photo-frame"><img src="img/arya-city.jpg" alt="Arya on a rooftop terrace in the city at dusk" data-speed="0.08" loading="lazy" width="600" height="800" /></div>
+        <figcaption class="mono">July 2026</figcaption>
+      </figure>
+      <div class="about-copy">
+        <p class="kicker mono reveal">01 · ABOUT ME</p>
+        <h2 class="reveal">I build for people who have to decide fast.</h2>
+        <p class="reveal">I study <b>Information Technology at Institut Teknologi Sepuluh Nopember (ITS)</b> in Surabaya, Indonesia. Most of my work is for people under pressure: farmers watching for drought, towns in the path of volcanic ash, refinery crews near red zones, and SOC teams facing a flood of packets.</p>
+        <p class="reveal">I like closing the loop: systems that <span class="t-see">see</span> what is happening, <span class="t-defend">defend</span> what matters, and help people <span class="t-decide">decide</span> what to do next.</p>
+        <ol class="timeline reveal">
+          <li><span class="mono">2026</span><b>UM Metro Hackathon</b> Jagapadi, satellite rice-field monitoring</li>
+          <li><span class="mono">2026</span><b>JOINTS UGM</b> HELALOKA, volcanic ash and wildfire smoke forecasts</li>
+          <li><span class="mono">2026</span><b>ForgeHacks Online</b> Standbai, smoke and ash alerts</li>
+          <li><span class="mono">2026</span><b>IOC Digital Hackathon</b> SIEWS+, AI early warning for oil and gas</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- PILLARS -->
+  <section class="section pillars" aria-label="What I work on">
+    <p class="kicker mono reveal center">02 · WHAT I WORK ON</p>
+    <div class="stage-wrap pillars-wrap">
+      <canvas class="stage" data-world="pillars" aria-hidden="true"></canvas>
+    </div>
+    <div class="pillar-row">
+      <article class="pillar reveal"><p class="mono t-see">01 / SEE</p><h3>Perception</h3><p>YOLOv8 geofencing, PPE checks, Sentinel radar and optical imagery.</p></article>
+      <article class="pillar reveal"><p class="mono t-defend">02 / DEFEND</p><h3>Security</h3><p>Wazuh decoders, SOAR playbooks, digital forensics, LLM agent guardrails.</p></article>
+      <article class="pillar reveal"><p class="mono t-decide">03 / DECIDE</p><h3>Systems</h3><p>gRPC meshes, FastAPI services, cloud scheduling heuristics.</p></article>
+    </div>
+  </section>
+
+  <!-- NUMBERS -->
+  <section class="section numbers" aria-label="By the numbers">
+    <div class="stage-wrap numbers-wrap">
+      <canvas class="stage" data-world="metrics" aria-hidden="true"></canvas>
+    </div>
+    <div class="metric-row">
+      <div class="metric reveal"><p class="val t-defend" data-count="15.7" data-suffix="M" data-decimals="1">15.7M</p><p>SYN-flood packets absorbed and blocked</p><p class="src mono">SOC-SOAR</p></div>
+      <div class="metric reveal"><p class="val t-defend">&lt; <span data-count="4">4</span> s</p><p>from detection to block, no human in the loop</p><p class="src mono">SOC-SOAR</p></div>
+      <div class="metric reveal"><p class="val t-see">&lt; <span data-count="50">50</span> ms</p><p>per frame to check red-zone breaches</p><p class="src mono">SIEWS+</p></div>
+      <div class="metric reveal"><p class="val t-decide">~<span data-count="15">15</span>%</p><p>lower makespan than FCFS and Round Robin</p><p class="src mono">PEFT scheduler</p></div>
+      <div class="metric reveal"><p class="val t-decide" data-count="2812" data-group="1">2,812</p><p>papers screened for the world-model review</p><p class="src mono">SLR</p></div>
+    </div>
+  </section>
+
+  <!-- WORK -->
+  <section id="work" class="section work">
+    <p class="ghost" data-speed="-0.2" aria-hidden="true">WORK</p>
+    <p class="kicker mono reveal">03 · FEATURED WORK</p>
+    <h2 class="reveal">Selected projects</h2>
+
+    <article class="flagship reveal">
+      <div class="shot tilt"><img src="img/projects/jagapadi.png" alt="Jagapadi landing page on a laptop and phone, with the Jagapadi logo" data-speed="0.06" loading="lazy" /></div>
+      <div class="card-copy">
+        <p class="meta mono">UM METRO HACKATHON 2026 · TEAM OF THREE</p>
+        <h3>Jagapadi · rice fields, watched from orbit</h3>
+        <p>Sentinel-1 radar and Sentinel-2 imagery plus weather ensembles feed a water-balance model for fields in Metro, Lampung. Farmers get plain-language verdicts and Telegram alerts on drought, flood and pest risk; extension officers get a group dashboard and a 3D field diorama.</p>
+        <ul class="tags mono"><li>FastAPI</li><li>React</li><li>Three.js</li><li>Sentinel-1/2</li><li>Open-Meteo</li><li>Telegram</li></ul>
+        <p class="links"><span class="muted">Repository is private during judging</span></p>
+      </div>
+    </article>
+
+    <div class="cards">
+      <article class="card reveal">
+        <div class="shot tilt"><img src="img/projects/helaloka.png" alt="HELALOKA landing page and smoke-dispersion map" loading="lazy" /></div>
+        <p class="meta mono">JOINTS UGM 2026 · TOP CONTRIBUTOR</p>
+        <h3>HELALOKA</h3>
+        <p>One Lagrangian particle engine simulates volcanic ash and wildfire smoke across Indonesia: 70 volcanoes and 36 fire-prone forest and peat areas, with P5/P50/P95 impact ranges, clinics in the plume and routes to hospitals outside it.</p>
+        <ul class="tags mono"><li>JavaScript</li><li>Python</li><li>NASA FIRMS</li><li>Ensembles</li></ul>
+        <p class="links"><a href="https://helaloka.up.railway.app/">Live ↗</a><a href="https://github.com/nyarikerja/JOINTS2026">Repository</a></p>
+      </article>
+      <article class="card reveal">
+        <div class="shot tilt"><img src="img/projects/narpati.png" alt="Narpati Quest landing page and gameplay screen" loading="lazy" /></div>
+        <p class="meta mono">AI TEXT RPG · LEAD CONTRIBUTOR</p>
+        <h3>Narpati Quest</h3>
+        <p>An interactive Mahabharata adventure in the world of Javanese wayang, narrated by a "Dalang AI" game master that works with Gemini, OpenAI, Groq, DeepSeek or OpenRouter and uses retrieval to stay true to the lore.</p>
+        <ul class="tags mono"><li>TypeScript</li><li>Next.js</li><li>LLMs</li><li>RAG</li></ul>
+        <p class="links"><a href="https://web-sable-three-46.vercel.app">Play ↗</a></p>
+      </article>
+      <article class="card reveal">
+        <div class="shot tilt"><img src="img/projects/aromasys.png" alt="AromaSys landing page on a laptop with the AromaSys logo" loading="lazy" /></div>
+        <p class="meta mono">WAREHOUSE INTELLIGENCE · LEAD DEVELOPER</p>
+        <h3>AromaSys</h3>
+        <p>Digital-twin floor plan with live sensor and cold-chain telemetry, Roboflow vision quality control, a Gemini 2.5 Flash operations copilot, 4-role RBAC and FIFO expiry tracking.</p>
+        <ul class="tags mono"><li>Next.js 16</li><li>Express 5</li><li>PostgreSQL</li><li>Gemini</li></ul>
+        <p class="links"><a href="https://cyberhack-digendong-bokem.vercel.app/">Live ↗</a><a href="https://github.com/aryarefman/cyberhack-digendong-bokem">Repository</a></p>
+      </article>
+      <article class="card reveal">
+        <div class="shot tilt"><img src="img/projects/siews.png" alt="SIEWS+ YOLOv8 detection of helmets and safety vests on a monitor, with the S+ logo" loading="lazy" /></div>
+        <p class="meta mono">IOC DIGITAL HACKATHON 2026</p>
+        <h3>SIEWS+ 5.0</h3>
+        <p>YOLOv8 on live RTSP streams checks PPE and detects people inside red-zone polygons in under 50 ms per frame, triggers fail-safe shutdown signals, and alerts over WebSocket and WhatsApp.</p>
+        <ul class="tags mono"><li>Python</li><li>FastAPI</li><li>YOLOv8</li><li>OpenCV</li></ul>
+        <p class="links"><a href="https://github.com/aryarefman/migas-siews">Repository</a></p>
+      </article>
+      <article class="card reveal">
+        <div class="shot tilt"><img src="img/projects/soc.png" alt="SOC-SOAR Shuffle workflow and Telegram auto-block alerts" loading="lazy" /></div>
+        <p class="meta mono">AUTOMATED DDOS RESPONSE</p>
+        <h3>SOC-SOAR</h3>
+        <p>Custom Wazuh decoders spot SYN-flood state exhaustion, an active-response script drops the attacker with iptables, and Shuffle opens a Jira ticket and posts to Telegram. Under 4 seconds, no human in the loop.</p>
+        <ul class="tags mono"><li>Wazuh</li><li>Shuffle</li><li>Jira API</li><li>Bash</li></ul>
+        <p class="links"><a href="https://github.com/aryarefman/soc-soar">Repository</a></p>
+      </article>
+      <article class="card reveal">
+        <div class="shot tilt"><img src="img/projects/skyopt.png" alt="Sky Optimizers 3D teaching animation on a laptop with the eagle and wolf mascots" loading="lazy" /></div>
+        <p class="meta mono">INTERACTIVE 3D TEACHING</p>
+        <h3>Sky Optimizers</h3>
+        <p>Particle Swarm Optimization and the Grey Wolf Optimizer search the same landscape step by step on floating islands, with a narrated explainer on how both are used in cloud computing.</p>
+        <ul class="tags mono"><li>Three.js</li><li>JavaScript</li><li>Metaheuristics</li></ul>
+        <p class="links"><a href="https://aryarefman.github.io/metaheuristik-pso-gwo/">Live ↗</a><a href="https://github.com/aryarefman/metaheuristik-pso-gwo">Repository</a></p>
+      </article>
+    </div>
+  </section>
+
+  <!-- TEAMS + RESEARCH -->
+  <section id="team" class="section team">
+    <div class="split">
+      <div>
+        <p class="kicker mono reveal">04 · TEAMS &amp; ORGANISATIONS</p>
+        <h2 class="reveal">Built with others</h2>
+        <ul class="rows">
+          <li class="reveal"><a href="https://ibl-eta.vercel.app"><b>IBL 2K26</b><span>Open-recruitment site for the ITS Basketball League, frontend and backend</span><i>ibl-project ↗</i></a></li>
+          <li class="reveal"><div><b>Website ARA 8.0</b><span>Event website for ARA 8.0 at ITS, built with Next.js; top contributor</span><i>ARenewalAgent-ITS</i></div></li>
+          <li class="reveal"><a href="https://github.com/ITHACKITS/FE-FORGEHACK-2026"><b>Standbai / UdaraSiaga</b><span>Smoke and ash forecasts with household alerts, ForgeHacks Online 2026</span><i>ITHACKITS ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/airenmeyy/kelompok-1-eas-bigdata"><b>KECAMATRAS</b><span>Kecamatan metrics and anomaly tracking for Surabaya; top contributor</span><i>Big Data ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/baboey/fp-tka-1"><b>Order Processing Service</b><span>Cloud deployment with endpoint and Locust load testing; top contributor</span><i>Cloud Computing ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/rezcape/Kriptografi_Diffie-Hellman-dan-ElGamal"><b>Diffie-Hellman &amp; ElGamal</b><span>Key exchange and public-key encryption in Python; main contributor</span><i>Cryptography ↗</i></a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="kicker mono reveal">05 · RESEARCH</p>
+        <h2 class="reveal">Reading &amp; writing</h2>
+        <ul class="rows">
+          <li class="reveal"><a href="https://github.com/aryarefman/paper"><b>Least-Privilege Guardrails for Multilingual LLM Agents</b><span>A deterministic verifier for over-privileged tool calls in English, Indonesian and Javanese, tested on SEA-LION, Qwen 2.5, Llama 3.1 and GPT-4o</span><i>Paper ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/aryarefman/penulisan-ilmiah"><b>JEPA vs generative world models</b><span>PRISMA 2020 review: 2,812 records from 8 databases narrowed to 42 studies</span><i>SLR ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/aryarefman/soka-peft-heuristik"><b>PEFT cloud scheduler</b><span>~15% lower makespan and 12% less energy than FCFS and Round Robin over 1,000 tasks</span><i>CloudSim ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/aryarefman/grpc-project"><b><img src="img/projects/novapulse-logo.png" alt="" width="16" height="16" /> NovaPulse</b><span>Smart-city gRPC backbone that reroutes traffic when air quality turns toxic</span><i>gRPC ↗</i></a></li>
+          <li class="reveal"><a href="https://github.com/aryarefman/forensik-digital"><b>Digital Forensics Casebook</b><span>Five hash-verified cases following ISO/IEC 27037</span><i>Forensics ↗</i></a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="contact">
+    <canvas class="stage" data-world="footer" aria-hidden="true"></canvas>
+    <img class="me" src="img/arya-waterfall.png" alt="Arya standing barefoot in a river, smiling" data-speed="0.12" loading="lazy" />
+    <div class="contact-copy">
+      <p class="kicker mono">06 · CONTACT</p>
+      <h2>Let's build something.</h2>
+      <p>Open to research collaboration, internships and hackathon teams.</p>
+      <div class="cta">
+        <a class="btn primary" href="mailto:arya445refman@gmail.com">arya445refman@gmail.com</a>
+        <a class="btn" href="https://www.linkedin.com/in/aryarefman">LinkedIn</a>
+        <a class="btn" href="https://github.com/aryarefman">GitHub</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot mono">
+  <span>© 2026 Arya Bisma Putra Refman</span>
+  <span>3D built with three.js · <a href="https://github.com/aryarefman/aryarefman.github.io">source</a></span>
+</footer>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
