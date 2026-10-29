@@ -4,6 +4,7 @@
 // `stage` runs 0 → 6: 0 starry sky · 1 aurora · 2 clouds · 3 sea surface · 4 shallow sea · 5 twilight zone · 6 abyss
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ufo } from "./creatures.js";
 import { fishSchool, seaTurtle, jellyWhale, glowReef, pirateShip } from "./sealife.js";
@@ -244,6 +245,31 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const whale = jellyWhale(uniforms); whale.scale.setScalar(1.6);
   const whalePath = (q) => new THREE.Vector3(9 + Math.cos(q * 0.06) * 14, -133 + Math.sin(q * 0.12) * 1.2, -40 + Math.sin(q * 0.06) * 8);
   scene.add(sardines, lantern, turtle, whale);
+  // a school of real scanned barramundi (CC0 model from the Khronos glTF sample assets) in the shallows;
+  // the stylised sardines stay as the fallback until the model has loaded
+  const BARRA = mobile ? 14 : 28, barraFish = [];
+  let barra = null;
+  new GLTFLoader().load("models/barramundi.glb", (gltf) => {
+    let src = null; gltf.scene.traverse((o) => { if (o.isMesh && !src) src = o; });
+    const geo = src.geometry.clone(); geo.translate(0, -0.14, 0);                 // centre the body on its spine
+    const mat = src.material.clone();
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = uniforms.uTime;
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uTime;")
+        .replace("#include <begin_vertex>", `#include <begin_vertex>
+          float ph = float(gl_InstanceID) * 1.7;
+          float tw = pow(clamp((0.2 - position.z) / 0.52, 0.0, 1.0), 1.6);       // nose at +z: the tail end bends most
+          transformed.x += sin(uTime * 6.5 + ph - position.z * 9.0) * 0.07 * tw + sin(uTime * 6.5 + ph) * 0.006;`);
+    };
+    barra = new THREE.InstancedMesh(geo, mat, BARRA); barra.frustumCulled = false;
+    let s2 = 9; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < BARRA; i++) barraFish.push({ off: new THREE.Vector3((r2() - 0.5) * 9, (r2() - 0.5) * 3, (r2() - 0.5) * 6), ph: r2() * 6.28, s: 2.6 + r2() * 1.4, lag: r2() * 1.5 });
+    scene.add(barra);
+    sardines.removeFromParent();
+  });
+  const barraPath = (q) => new THREE.Vector3(13 + Math.cos(q * 0.3) * 7, -25 + Math.sin(q * 0.6) * 1.2, -30 + Math.sin(q * 0.3) * 5);
+  const bDummy = new THREE.Object3D(), bHere = new THREE.Vector3(), bAhead = new THREE.Vector3(), bWob = new THREE.Vector3();
+  const bPlace = (f, q, out) => out.copy(barraPath(q - f.lag)).add(f.off).add(bWob.set(Math.sin(q * 0.6 + f.ph) * 0.5, Math.sin(q * 0.8 + f.ph) * 0.25, Math.cos(q * 0.5 + f.ph) * 0.5));
   // the reference creatures, one or two per depth, each swimming its own loop on the right of the text column
   const swimmers = [
     { o: dolphin(uniforms), s: 2.2, ymin: -12, path: (q) => new THREE.Vector3(18 + Math.cos(q * 0.32) * 9, -9 + Math.sin(q * 0.64) * 2.5, -30 + Math.sin(q * 0.32) * 7) },
@@ -356,6 +382,13 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         shafts.position.set(camera.position.x, 0, -20);
         hemi.intensity = 0.6 * (1 - d / 3) + 0.08;
         moonLight.intensity = 0.9 * (1 - d / 3);
+        if (barra) {
+          barra.visible = y > -60;
+          if (barra.visible) {
+            barraFish.forEach((f, i) => { bPlace(f, t, bHere); bPlace(f, t + 0.2, bAhead); bDummy.position.copy(bHere); bDummy.lookAt(bAhead); bDummy.scale.setScalar(f.s); bDummy.updateMatrix(); barra.setMatrixAt(i, bDummy.matrix); });
+            barra.instanceMatrix.needsUpdate = true;
+          }
+        }
         if (sardines.visible) {
           sardines.userData.update(t);
           turtle.position.copy(turtlePath(t)); turtle.lookAt(turtlePath(t + 0.5)); turtle.userData.update(t);
