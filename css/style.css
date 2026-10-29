@@ -236,12 +236,18 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 .contact-copy h2 { font-size: clamp(44px, 6vw, 84px); }
 .contact-copy > p:not(.kicker) { color: var(--muted); font-size: 19px; }
 .me { position: absolute; bottom: 0; left: 50%; height: 520px; width: auto; z-index: 1; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5)); will-change: transform; }
-.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.cta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 32px; max-width: 460px; }
+.cta .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 52px; padding: 0 20px; }
+.cta .btn svg { width: 19px; height: 19px; flex: none; }
+.mail-line { margin-top: 16px; font-size: 13px; color: var(--muted); letter-spacing: 0.04em; }
 .btn { display: inline-block; text-decoration: none; padding: 14px 22px; border-radius: 999px; border: 1px solid var(--line-strong); font-weight: 600; font-size: 15px; background: rgba(16, 12, 36, 0.6); transition: background 0.2s, border-color 0.2s; will-change: transform; }
 .btn:hover { background: var(--line); border-color: var(--decide); }
 .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .btn.primary:hover { background: #fff; }
 .foot { position: relative; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 26px var(--pad); font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); background: rgba(5, 5, 15, 0.8); }
+
+/* text sits on a live 3D scene: a soft shadow keeps it readable over bright clouds and water */
+.section h2, .section h3, .section p, .metric .val, .pillar h3, .contact-copy h2, .contact-copy p { text-shadow: 0 2px 14px rgba(2, 4, 12, 0.55); }
 
 /* reveal */
 .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); }

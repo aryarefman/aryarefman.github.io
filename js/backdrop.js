@@ -1,8 +1,9 @@
-// The page background: one full-screen shader that descends from a night sky with aurora, through the clouds,
-// across the sea surface and down to the abyss. `stage` runs 0 → 6:
-//   0 starry sky · 1 aurora · 2 clouds · 3 sea surface · 4 shallow sea · 5 twilight zone · 6 abyss
-// The aurora hue follows the scroll, and the same hue tints the light and bioluminescence below the water.
+// The page background is a real 3D scene the camera descends through as you scroll:
+// a night sky with aurora, a cloud deck, a reflective ocean, then underwater past fish and jellyfish
+// down to the seafloor, where a research submarine sweeps the dark with its lights.
+// `stage` runs 0 → 6: 0 starry sky · 1 aurora · 2 clouds · 3 sea surface · 4 shallow sea · 5 twilight zone · 6 abyss
 import * as THREE from "three";
+import { Water } from "three/addons/objects/Water.js";
 
 export const STAGES = [
   { name: "Starry sky", m: 8000 },
@@ -19,231 +20,423 @@ export function metresAt(s) {
   return STAGES[i].m + (STAGES[i + 1].m - STAGES[i].m) * t;
 }
 
-const vert = /* glsl */ `
-varying vec2 vUv;
-void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-`;
+// camera height (scene units) and pitch along the descent
+const PATH_Y = [[0, 900], [1, 450], [2, 170], [2.85, 6], [3.15, -6], [4, -28], [5, -82], [6, -128]];
+const PATH_PITCH = [[0, 0.5], [1, 0.26], [2, 0.05], [2.85, -0.03], [3.15, -0.04], [4, -0.06], [5, -0.1], [6, -0.3]];
+function along(path, s) {
+  if (s <= path[0][0]) return path[0][1];
+  for (let i = 0; i < path.length - 1; i++) {
+    const [s0, v0] = path[i], [s1, v1] = path[i + 1];
+    if (s <= s1) { const t = (s - s0) / (s1 - s0), e = t * t * (3 - 2 * t); return v0 + (v1 - v0) * e; }
+  }
+  return path[path.length - 1][1];
+}
 
-const frag = /* glsl */ `
-precision highp float;
-varying vec2 vUv;
-uniform vec2 uRes;
-uniform float uTime, uStage, uScroll, uHue, uPointer;
-uniform int uSteps;
+const MOON = new THREE.Vector3(-0.5, 0.32, -1).normalize();
 
-#define PI 3.14159265
-
+const NOISE_GLSL = /* glsl */ `
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise(vec2 p) {
-  vec2 i = floor(p), f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
+  vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
 }
 const mat2 ROT = mat2(0.8, -0.6, 0.6, 0.8);
 float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++) { s += a * noise(p); p = ROT * p * 2.03; a *= 0.5; } return s; }
 float fbm3(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++) { s += a * noise(p); p = ROT * p * 2.03; a *= 0.5; } return s; }
 vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
-float sstep(float a, float b, float x) { return smoothstep(a, b, x); }
-float bump(float a, float p, float b, float x) { return x < p ? smoothstep(a, p, x) : 1.0 - smoothstep(p, b, x); }
-
-const vec3 MOON = normalize(vec3(-0.5, 0.32, 1.0));
-
-// aurora colour at a curtain height (0 bottom → 1 top): green-ish fringe below, shifted hue above
-vec3 auroraCol(float k) { return hsv(fract(uHue + k * 0.18), 0.75 - k * 0.2, 1.0); }
-
-// Curtains: march horizontal slabs above the viewer; each slab samples a wavy band with vertical streaks.
-vec3 aurora(vec3 rd, int steps) {
-  vec3 acc = vec3(0);
-  if (rd.y < 0.01) return acc;
-  for (int i = 0; i < 40; i++) {
-    if (i >= steps) break;
-    float fi = float(i) / float(steps);
-    float h = 1.0 + fi * 1.6;
-    vec2 q = rd.xz / rd.y * h;                       // where this slab is pierced
-    float wave = (fbm3(vec2(q.x * 0.18 + uTime * 0.015, 2.0)) - 0.5) * 7.0 + sin(q.x * 0.35 + uTime * 0.08) * 1.4;
-    float d1 = q.y - 3.4 - wave, d2 = q.y - 6.8 - wave * 0.7 - 1.2;
-    float band = exp(-d1 * d1 * 0.9) + 0.6 * exp(-d2 * d2 * 0.6);
-    float rays = pow(fbm3(vec2(q.x * 2.4 + uTime * 0.04, fi * 0.6)), 2.0) * 2.4;
-    acc += auroraCol(fi) * band * rays * (1.0 - fi) * (3.5 / float(steps));
-  }
-  return acc * sstep(0.01, 0.2, rd.y);
-}
-
-vec3 skyBase(vec3 rd) {
-  float h = max(rd.y, 0.0);
-  vec3 col = mix(vec3(0.045, 0.05, 0.11), vec3(0.006, 0.008, 0.028), pow(h, 0.45));
-  col += vec3(0.05, 0.04, 0.1) * exp(-h * 9.0);                  // airglow at the horizon
-  // stars on a sphere grid, fading into the haze near the horizon
-  vec2 sp = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1.0, 1.0))) * 160.0;
-  vec2 cell = floor(sp), f = fract(sp) - 0.5;
-  float r = hash(cell);
-  if (r > 0.972) {
-    vec2 o = vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5;
-    float d = length(f - o * 0.6);
-    float tw = 0.7 + 0.3 * sin(uTime * (1.0 + r * 3.0) + r * 40.0);
-    col += mix(vec3(0.75, 0.8, 1.0), vec3(1.0, 0.85, 0.7), hash(cell + 9.0)) * smoothstep(0.12, 0.0, d) * tw * (r - 0.972) * 36.0 * sstep(0.0, 0.25, h);
-  }
-  // milky way: a soft dusty band across the sky
-  float mw = exp(-pow(dot(rd, normalize(vec3(0.7, 0.55, -0.45))) * 3.0, 2.0));
-  col += vec3(0.12, 0.1, 0.16) * mw * fbm(sp * 0.02) * sstep(0.05, 0.4, h);
-  col -= vec3(0.04) * mw * sstep(0.62, 0.8, fbm(sp * 0.035 + 4.0));  // dust lanes
-  // moon and its halo
-  float m = dot(rd, MOON);
-  float disc = smoothstep(0.99986, 0.99991, m);
-  float mottle = 0.82 + 0.18 * fbm(rd.xy * 900.0);                     // maria on the moon's face
-  col += vec3(3.2, 3.05, 2.7) * disc * mottle;
-  col += vec3(0.16, 0.17, 0.24) * pow(max(m, 0.0), 2200.0) + vec3(0.035, 0.04, 0.065) * pow(max(m, 0.0), 40.0);
-  return max(col, 0.0);
-}
-
-// wave height and its slope for the sea surface
-float waves(vec2 p) {
-  float t = uTime * 0.6;
-  return 0.35 * sin(dot(p, vec2(0.8, 0.6)) * 0.9 + t) + 0.22 * sin(dot(p, vec2(-0.5, 0.86)) * 1.6 + t * 1.3)
-       + 0.12 * sin(dot(p, vec2(0.2, -0.98)) * 2.7 + t * 1.7) + 0.35 * (fbm3(p * 0.6 + t * 0.15) - 0.5);
-}
-
-vec3 seaSurface(vec3 ro, vec3 rd) {
-  float t = ro.y / -rd.y;
-  vec3 pos = ro + rd * t;
-  vec2 e = vec2(0.05, 0.0);
-  float hx = waves(pos.xz + e.xy) - waves(pos.xz - e.xy), hz = waves(pos.xz + e.yx) - waves(pos.xz - e.yx);
-  float fade = exp(-t * 0.004);
-  vec3 n = normalize(vec3(-hx * 2.2 * fade, 2.0 * e.x * 2.0, -hz * 2.2 * fade));
-  vec3 rf = reflect(rd, n); rf.y = abs(rf.y);
-  float fres = 0.02 + 0.98 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
-  vec3 refl = skyBase(rf) + aurora(rf, 12) * 0.8;
-  vec3 deep = vec3(0.004, 0.018, 0.035) + auroraCol(0.2) * 0.012;
-  vec3 col = mix(deep, refl, fres);
-  col += vec3(1.0, 0.95, 0.85) * pow(max(dot(rf, MOON), 0.0), 600.0) * 3.0;   // moon glitter
-  return mix(col, skyBase(vec3(rd.x, 0.0, rd.z)) * 1.4, 1.0 - exp(-t * 0.006)); // haze toward the horizon
-}
-
-vec3 aboveWater(vec2 p, float s) {
-  float pitch = mix(0.62, 0.02, sstep(0.6, 3.0, s));
-  vec3 rd = normalize(vec3(p.x + uPointer * 0.03, p.y + pitch, 1.35));
-  float camH = mix(60.0, 2.5, sstep(1.4, 3.0, s));
-  vec3 col = rd.y > 0.0 ? skyBase(rd) + aurora(rd, uSteps) : seaSurface(vec3(0.0, camH, 0.0), rd);
-  // cloud deck: we sink through it around stage 2
-  float amt = bump(1.1, 2.0, 2.8, s);
-  if (amt > 0.001) {
-    vec2 c = vec2(p.x * 1.1 + uTime * 0.008, p.y * 1.5 + (s - 2.0) * 2.6);
-    float base = fbm(c * 1.6 + vec2(0.0, uTime * 0.005));
-    float dens = sstep(0.36, 0.7, base) * amt;
-    float lit = sstep(0.45, 0.75, fbm(c * 1.6 + vec2(0.06, 0.09)) - base + 0.6);   // brighter where the cloud thins toward the moon
-    vec3 cc = mix(vec3(0.07, 0.075, 0.13), vec3(0.6, 0.63, 0.78), lit) + auroraCol(0.3) * 0.1;
-    col = mix(col, cc, dens * 0.92);
-    col = mix(col, vec3(0.16, 0.17, 0.26), bump(1.7, 2.05, 2.4, s) * 0.55);         // inside the deck
-  }
-  return col;
-}
-
-// ---------- under the water ----------
-float particles(vec2 p, float scale, float speed, float density, float seed) {
-  vec2 q = p * scale + vec2(seed, uScroll * 0.0012 * speed + uTime * 0.015 * speed);
-  vec2 cell = floor(q), f = fract(q) - 0.5;
-  float r = hash(cell + seed);
-  if (r < 1.0 - density) return 0.0;
-  vec2 o = vec2(hash(cell + 1.3 + seed), hash(cell + 5.9 + seed)) - 0.5;
-  return smoothstep(0.08, 0.0, length(f - o * 0.7));
-}
-
-vec3 jelly(vec2 p, vec2 c, float size, vec3 tint) {
-  vec2 d = (p - c) / size;
-  float bell = length(d * vec2(1.0, 1.7));
-  vec3 col = tint * (smoothstep(1.0, 0.0, bell) * 0.5 + smoothstep(0.25, 0.0, abs(bell - 0.9)) * 0.8) * step(-0.05, d.y + 0.02);
-  for (int k = 0; k < 5; k++) {
-    float x = -0.55 + float(k) * 0.27;
-    float wx = d.x - x - sin(d.y * 6.0 + uTime * 1.6 + float(k)) * 0.08 * (-d.y);
-    col += tint * smoothstep(0.05, 0.0, abs(wx)) * step(d.y, 0.0) * smoothstep(-3.0, 0.0, d.y) * 0.55;
-  }
-  return col;
-}
-
-vec3 underWater(vec2 p, vec2 uv, float s) {
-  float d = clamp(s - 3.0, 0.0, 3.0);            // 0 just below the surface → 3 abyss
-  vec3 shallow = vec3(0.02, 0.16, 0.22), mid = vec3(0.008, 0.06, 0.13), twi = vec3(0.003, 0.022, 0.055), abyss = vec3(0.0, 0.006, 0.016);
-  vec3 base = d < 1.0 ? mix(shallow, mid, d) : d < 2.0 ? mix(mid, twi, d - 1.0) : mix(twi, abyss, d - 2.0);
-  vec3 tint = auroraCol(0.15);
-  vec3 col = base * mix(0.45, 1.5, uv.y) + tint * 0.03 * (1.0 - d / 3.0);
-  // light shafts slanting down from the surface, fading with depth
-  float shaftAmt = 1.0 - sstep(0.0, 1.8, d);
-  if (shaftAmt > 0.001) {
-    float x = p.x * 1.0 + (1.0 - uv.y) * 0.35;
-    float sh = pow(fbm3(vec2(x * 5.0 + uTime * 0.06, uTime * 0.03)), 3.0) * 2.2;
-    col += mix(vec3(0.5, 0.8, 0.95), tint, 0.35) * sh * sstep(-0.2, 1.0, uv.y) * shaftAmt * 0.32;
-    // the surface seen from below: rippling caustic light at the top
-    float surf = sstep(0.7, 1.0, uv.y + 0.08 * (1.0 - d));
-    float caus = pow(1.0 - abs(sin(fbm3(p * 22.0 + uTime * 0.35) * 12.0)), 10.0);
-    col += vec3(0.5, 0.8, 0.9) * surf * (0.1 + caus * 0.22) * (1.0 - sstep(0.0, 0.8, d));
-  }
-  // marine snow drifting up past us (three depths for parallax)
-  col += vec3(0.6, 0.75, 0.8) * (particles(p, 18.0, 1.0, 0.18, 0.0) * 0.25 + particles(p, 9.0, 2.0, 0.12, 7.0) * 0.35 + particles(p, 4.5, 3.5, 0.08, 13.0) * 0.5) * (0.4 + 0.6 * (1.0 - d / 3.0));
-  // bioluminescent plankton and jellyfish deeper down, in the aurora hue
-  float bio = sstep(0.8, 1.8, d);
-  if (bio > 0.001) {
-    float pulse = 0.6 + 0.4 * sin(uTime * 2.0 + hash(floor(p * 14.0)) * 30.0);
-    col += hsv(fract(uHue + 0.05), 0.7, 1.0) * particles(p, 14.0, 0.6, 0.06, 21.0) * pulse * bio * 0.9;
-    float jy = mod(uTime * 0.02 + uScroll * 0.00025, 2.2) - 1.1;
-    col += jelly(p, vec2(-0.55, jy), 0.09, hsv(fract(uHue + 0.55), 0.6, 0.8)) * bio;
-    col += jelly(p, vec2(0.62, mod(jy + 1.0, 2.2) - 1.1), 0.06, hsv(fract(uHue + 0.7), 0.6, 0.7)) * bio;
-    col += jelly(p, vec2(0.15, mod(jy + 0.45, 2.2) - 1.1), 0.045, hsv(fract(uHue + 0.85), 0.6, 0.6)) * bio * 0.8;
-  }
-  // the seafloor rises from below at the bottom of the page
-  float fl = sstep(2.2, 3.0, d);
-  if (fl > 0.001) {
-    float far = -0.36 + (1.0 - fl) * -0.5 + fbm3(vec2(p.x * 1.6 + 7.0, 1.0)) * 0.24;
-    float near = -0.46 + (1.0 - fl) * -0.6 + fbm3(vec2(p.x * 3.2 + 2.0, 3.0)) * 0.16;
-    if (p.y < far) col = mix(col, vec3(0.004, 0.016, 0.03), 0.85);
-    if (p.y < near) {
-      col = vec3(0.006, 0.012, 0.022) + vec3(0.02, 0.03, 0.04) * fbm(p * 12.0);
-      col += hsv(fract(uHue + 0.1), 0.6, 1.0) * particles(p, 22.0, 0.0, 0.05, 31.0) * 0.8;
-      col += vec3(0.06, 0.09, 0.12) * smoothstep(0.02, 0.0, abs(p.y - near));       // rim light
-    }
-  }
-  return col;
-}
-
-void main() {
-  vec2 uv = vUv;
-  vec2 p = (uv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
-  float s = uStage;
-  vec3 col;
-  // the waterline sweeps up the screen as we dive (stage 2.85 → 3.15)
-  float wl = mix(-0.75, 0.75, sstep(2.85, 3.15, s)) + 0.018 * sin(p.x * 9.0 + uTime * 1.4) + 0.01 * sin(p.x * 23.0 - uTime * 2.1);
-  if (s < 2.85 || (s < 3.15 && p.y > wl)) col = aboveWater(p, s);
-  else col = underWater(p, uv, s);
-  if (s >= 2.85 && s <= 3.15) col += vec3(0.6, 0.8, 0.9) * smoothstep(0.012, 0.0, abs(p.y - wl)) * 0.6;
-  // filmic finish: tone map, vignette, fine grain
-  col = col / (1.0 + col * 0.6);
-  col *= 1.0 - 0.35 * pow(length(uv - 0.5) * 1.25, 2.2);
-  col += (hash(uv * uRes + fract(uTime) * 100.0) - 0.5) * 0.012;
-  gl_FragColor = vec4(pow(max(col, 0.0), vec3(0.95)), 1.0);
-}
 `;
 
-export function createBackdrop(canvas, { mobile = false, reduceMotion = false } = {}) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "high-performance" });
-  const scale = mobile ? 0.4 : 0.55; // a soft background: render at reduced resolution and let CSS scale it up
-  const uniforms = {
-    uRes: { value: new THREE.Vector2() }, uTime: { value: 0 }, uStage: { value: 0 }, uScroll: { value: 0 },
-    uHue: { value: 0.35 }, uPointer: { value: 0 }, uSteps: { value: mobile ? 14 : 26 },
+// ---------- sky dome: stars, Milky Way, moon and aurora curtains ----------
+function skyDome(uniforms) {
+  const mat = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: /* glsl */ `
+      varying vec3 vDir;
+      void main() { vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`,
+    fragmentShader: /* glsl */ `
+      uniform float uTime, uHue; uniform int uSteps; uniform vec3 uMoon;
+      varying vec3 vDir;
+      ${NOISE_GLSL}
+      vec3 auroraCol(float k) { return hsv(fract(uHue + k * 0.18), 0.75 - k * 0.2, 1.0); }
+      vec3 aurora(vec3 rd) {
+        vec3 acc = vec3(0);
+        if (rd.y < 0.01) return acc;
+        for (int i = 0; i < 40; i++) {
+          if (i >= uSteps) break;
+          float fi = float(i) / float(uSteps), h = 1.0 + fi * 1.6;
+          vec2 q = rd.xz / rd.y * h;
+          float wave = (fbm3(vec2(q.x * 0.18 + uTime * 0.015, 2.0)) - 0.5) * 7.0 + sin(q.x * 0.35 + uTime * 0.08) * 1.4;
+          float d1 = -q.y - 3.4 - wave, d2 = -q.y - 6.8 - wave * 0.7 - 1.2;
+          float band = exp(-d1 * d1 * 0.9) + 0.6 * exp(-d2 * d2 * 0.6);
+          float rays = pow(fbm3(vec2(q.x * 2.4 + uTime * 0.04, fi * 0.6)), 2.0) * 2.4;
+          acc += auroraCol(fi) * band * rays * (1.0 - fi) * (3.4 / float(uSteps));
+        }
+        return acc * smoothstep(0.01, 0.2, rd.y);
+      }
+      void main() {
+        vec3 rd = normalize(vDir);
+        float h = max(rd.y, 0.0);
+        vec3 col = mix(vec3(0.045, 0.05, 0.11), vec3(0.006, 0.008, 0.028), pow(h, 0.45)) + vec3(0.05, 0.04, 0.1) * exp(-h * 9.0);
+        vec2 sp = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1.0, 1.0))) * 160.0;
+        vec2 cell = floor(sp), f = fract(sp) - 0.5;
+        float r = hash(cell);
+        if (r > 0.972) {
+          vec2 o = vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5;
+          float tw = 0.7 + 0.3 * sin(uTime * (1.0 + r * 3.0) + r * 40.0);
+          col += mix(vec3(0.75, 0.8, 1.0), vec3(1.0, 0.85, 0.7), hash(cell + 9.0)) * smoothstep(0.12, 0.0, length(f - o * 0.6)) * tw * (r - 0.972) * 36.0 * smoothstep(0.0, 0.25, h);
+        }
+        float mw = exp(-pow(dot(rd, normalize(vec3(0.7, 0.55, -0.45))) * 3.0, 2.0));
+        col += vec3(0.12, 0.1, 0.16) * mw * fbm(sp * 0.02) * smoothstep(0.05, 0.4, h);
+        col -= vec3(0.04) * mw * smoothstep(0.62, 0.8, fbm(sp * 0.035 + 4.0));
+        float m = dot(rd, uMoon);
+        col += vec3(3.2, 3.05, 2.7) * smoothstep(0.99986, 0.99991, m) * (0.82 + 0.18 * fbm(rd.xy * 900.0));
+        col += vec3(0.16, 0.17, 0.24) * pow(max(m, 0.0), 2200.0) + vec3(0.035, 0.04, 0.065) * pow(max(m, 0.0), 40.0);
+        col += aurora(rd);
+        col = col / (1.0 + col * 0.6);
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+    side: THREE.BackSide, depthWrite: false, toneMapped: false,
+  });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(4000, 48, 24), mat);
+  dome.frustumCulled = false; dome.renderOrder = -10;
+  return dome;
+}
+
+// soft cloud textures from noise, painted once
+function cloudTexture(seed) {
+  const N = 128, c = document.createElement("canvas"); c.width = c.height = N;
+  const g = c.getContext("2d"), img = g.createImageData(N, N);
+  let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const grid = Array.from({ length: 33 * 33 }, rnd);
+  const vn = (x, y) => {
+    const xi = Math.floor(x) & 31, yi = Math.floor(y) & 31, xf = x - Math.floor(x), yf = y - Math.floor(y);
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), at = (i, j) => grid[(j & 31) * 33 + (i & 31)];
+    return at(xi, yi) * (1 - u) * (1 - v) + at(xi + 1, yi) * u * (1 - v) + at(xi, yi + 1) * (1 - u) * v + at(xi + 1, yi + 1) * u * v;
   };
-  const mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms, depthTest: false, depthWrite: false });
-  const scene = new THREE.Scene(), cam = new THREE.Camera();
-  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let f = 0, a = 0.5, fx = x / 16, fy = y / 16;
+    for (let o = 0; o < 5; o++) { f += a * vn(fx, fy); fx *= 2; fy *= 2; a *= 0.5; }
+    const dx = (x - N / 2) / (N / 2), dy = (y - N / 2) / (N / 2) * 1.6;
+    const fall = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy));
+    const d = Math.max(0, f * 1.5 - 0.45) * fall * 1.9;
+    const lit = 150 + 105 * Math.min(1, Math.max(0, 0.5 - dy * 0.5)); // brighter on top, toward the moon
+    const i = (y * N + x) * 4;
+    img.data[i] = lit * 0.92; img.data[i + 1] = lit * 0.95; img.data[i + 2] = lit * 1.05; img.data[i + 3] = Math.min(255, d * 255);
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+function softDot() {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(0.3, "rgba(255,255,255,0.5)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+// ---------- jellyfish: translucent pulsing bell, frilled oral arms and long tentacles ----------
+function jellyfish(uniforms, hueOffset, size, phase) {
+  const group = new THREE.Group();
+  const shared = { uTime: uniforms.uTime, uHue: uniforms.uHue, uOff: { value: hueOffset }, uPhase: { value: phase } };
+  const pulse = /* glsl */ `float pulse(float t) { float c = fract(t * 0.28 + uPhase); return pow(sin(c * 3.14159), 4.0); }`;
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32, 0, Math.PI * 2, 0, Math.PI * 0.56), new THREE.ShaderMaterial({
+    uniforms: shared,
+    vertexShader: /* glsl */ `
+      uniform float uTime, uPhase; varying vec3 vN, vV, vP; ${pulse}
+      void main() {
+        vec3 p = position; float k = pulse(uTime);
+        float rim = 1.0 - clamp(p.y, 0.0, 1.0);
+        p.xz *= 1.0 - 0.16 * k * rim; p.y *= 1.0 + 0.1 * k;
+        p.xz *= 1.0 + 0.03 * sin(atan(p.z, p.x) * 16.0) * rim;          // scalloped margin
+        vP = position; vN = normalize(normalMatrix * normal);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uHue, uOff, uTime; varying vec3 vN, vV, vP;
+      vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
+      void main() {
+        float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
+        float ang = atan(vP.z, vP.x);
+        float canals = pow(abs(sin(ang * 4.0)), 40.0) * smoothstep(0.1, 0.9, 1.0 - vP.y);
+        float gonads = smoothstep(0.35, 0.0, abs(length(vP.xz) - 0.32)) * smoothstep(0.4, 0.8, vP.y) * pow(abs(sin(ang * 2.0)), 3.0);
+        vec3 c = hsv(fract(uHue + uOff), 0.55, 1.0);
+        vec3 col = c * (0.06 + fres * 1.4 + canals * 0.5) + vec3(1.0, 0.9, 0.95) * gonads * 0.25;
+        gl_FragColor = vec4(col, 0.12 + fres * 0.75 + canals * 0.3);
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+  }));
+  group.add(bell);
+
+  // tentacles and oral arms as animated lines: attribute `along` 0 at the bell → 1 at the tip
+  const strands = (count, length, radius, wiggle, width) => {
+    const SEG = 40, pos = [], alongA = [], idxA = [];
+    for (let k = 0; k < count; k++) {
+      const a = (k / count) * Math.PI * 2;
+      for (let j = 0; j < SEG; j++) {
+        for (const jj of [j, j + 1]) {
+          const t = jj / SEG;
+          pos.push(Math.cos(a) * radius, -t * length, Math.sin(a) * radius);
+          alongA.push(t); idxA.push(k);
+        }
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("along", new THREE.Float32BufferAttribute(alongA, 1));
+    geo.setAttribute("idx", new THREE.Float32BufferAttribute(idxA, 1));
+    return new THREE.LineSegments(geo, new THREE.ShaderMaterial({
+      uniforms: { ...shared, uWiggle: { value: wiggle }, uWidth: { value: width } },
+      vertexShader: /* glsl */ `
+        attribute float along, idx; uniform float uTime, uPhase, uWiggle; varying float vA; ${pulse}
+        void main() {
+          vec3 p = position; float k = pulse(uTime);
+          p.xz *= 1.0 - 0.16 * k * (1.0 - along);
+          p.x += sin(along * 7.0 - uTime * 1.3 + idx * 1.7) * along * uWiggle;
+          p.z += cos(along * 6.0 - uTime * 1.1 + idx * 2.3) * along * uWiggle;
+          p.y += k * along * 0.25;
+          vA = along; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform float uHue, uOff, uWidth; varying float vA;
+        vec3 hsv(float h, float s, float v) { vec3 k = clamp(abs(mod(h * 6.0 + vec3(0, 4, 2), 6.0) - 3.0) - 1.0, 0.0, 1.0); return v * mix(vec3(1), k, s); }
+        void main() { gl_FragColor = vec4(hsv(fract(uHue + uOff + vA * 0.08), 0.5, 1.0) * uWidth, (1.0 - vA) * 0.8); }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+  };
+  group.add(strands(28, 7.5, 0.92, 0.8, 0.55));   // fine marginal tentacles
+  group.add(strands(4, 3.2, 0.18, 0.5, 1.2));     // thick oral arms
+  group.add(strands(10, 3.6, 0.28, 0.4, 0.8));
+  group.scale.setScalar(size);
+  return group;
+}
+
+// ---------- research submarine with headlights ----------
+function submarine(uniforms) {
+  const g = new THREE.Group();
+  const hullMat = new THREE.MeshStandardMaterial({ color: 0xf0b13a, roughness: 0.45, metalness: 0.3, emissive: 0x3a2400, emissiveIntensity: 0.35 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2e38, roughness: 0.6, metalness: 0.5 });
+  const hull = new THREE.Mesh(new THREE.CapsuleGeometry(1.1, 3.6, 12, 32), hullMat); hull.rotation.z = Math.PI / 2; g.add(hull);
+  const tower = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 0.6, 8, 24), hullMat); tower.position.set(0.3, 1.0, 0); tower.scale.set(1.3, 1, 0.8); g.add(tower);
+  const port = new THREE.Mesh(new THREE.SphereGeometry(0.75, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0x9fd8ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.6, emissive: 0x2a6a8a, emissiveIntensity: 0.6 }));
+  port.rotation.z = Math.PI / 2; port.position.x = -2.75; g.add(port);
+  for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.CircleGeometry(0.2, 20), new THREE.MeshBasicMaterial({ color: 0xffd58a })); w.position.set(-0.8 + i * 0.8, 0.15, 1.1); g.add(w); }
+  const skid = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.12, 0.12), darkMat); skid.position.set(0, -1.35, 0.7); g.add(skid);
+  const skid2 = skid.clone(); skid2.position.z = -0.7; g.add(skid2);
+  const prop = new THREE.Group(); prop.position.x = 3.05; g.add(prop);
+  for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.22), darkMat); b.rotation.x = (k * Math.PI) / 2; prop.add(b); }
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.08), darkMat); fin.position.set(2.7, 0, 0); g.add(fin);
+  // work lights on the hull, so the sub reads in the dark
+  const work = new THREE.PointLight(0xffe2b0, 30, 14, 1.6); work.position.set(0, 3.2, 3); g.add(work);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff5040 })); beacon.position.set(0.3, 1.7, 0); g.add(beacon);
+  // headlights: spot lights that light the seafloor, plus visible beams in the water
+  const beams = [];
+  [-0.6, 0.6].forEach((z) => {
+    const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.16, 20), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    lamp.position.set(-2.4, -0.55, z); lamp.rotation.y = -Math.PI / 2; g.add(lamp);
+    const spot = new THREE.SpotLight(0xdff2ff, 60, 70, 0.42, 0.6, 1.4);
+    spot.position.copy(lamp.position); g.add(spot); g.add(spot.target);
+    const beamGeo = new THREE.ConeGeometry(4.6, 22, 32, 1, true); beamGeo.translate(0, -11, 0); beamGeo.rotateZ(-Math.PI / 2);
+    const beam = new THREE.Mesh(beamGeo, new THREE.ShaderMaterial({
+      uniforms: { uTime: uniforms.uTime },
+      vertexShader: "varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: /* glsl */ `uniform float uTime; varying vec3 vP;
+        void main() { float t = clamp(-vP.x / 22.0, 0.0, 1.0); float flick = 0.9 + 0.1 * sin(uTime * 3.0 + vP.x);
+          gl_FragColor = vec4(vec3(0.75, 0.9, 1.0), (1.0 - t) * (1.0 - t) * 0.16 * flick); }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    }));
+    beam.position.copy(lamp.position); g.add(beam);
+    beams.push({ spot, beam, z });
+  });
+  g.userData.update = (t) => {
+    prop.rotation.x = t * 4;
+    beacon.material.color.setHex(Math.sin(t * 3) > 0.6 ? 0xff5040 : 0x401010);
+    const sweep = Math.sin(t * 0.35) * 0.35;
+    beams.forEach(({ spot, beam, z }) => {
+      const dir = new THREE.Vector3(-Math.cos(sweep), -0.45, Math.sin(sweep) + z * 0.1).normalize();
+      spot.target.position.copy(spot.position).addScaledVector(dir, 20);
+      beam.rotation.set(0, sweep, 0.42); // tilt the beam down toward the seafloor
+    });
+    g.position.y = -133 + Math.sin(t * 0.6) * 0.25;
+    g.rotation.z = Math.sin(t * 0.5) * 0.03;
+  };
+  return g;
+}
+
+export function createBackdrop(canvas, { mobile = false, reduceMotion = false } = {}) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: "high-performance" });
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  const scale = mobile ? 0.5 : 0.75;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(mobile ? 62 : 52, innerWidth / innerHeight, 0.1, 6000);
+  const uniforms = { uTime: { value: 0 }, uHue: { value: 0.35 }, uSteps: { value: mobile ? 14 : 24 }, uMoon: { value: MOON } };
+
+  // sky, ocean surface (above) and its underside (below)
+  const dome = skyDome(uniforms); scene.add(dome);
+  const normals = new THREE.TextureLoader().load("img/textures/waternormals.jpg", (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+  const water = new Water(new THREE.PlaneGeometry(10000, 10000), {
+    textureWidth: mobile ? 256 : 512, textureHeight: mobile ? 256 : 512, waterNormals: normals,
+    sunDirection: MOON.clone(), sunColor: 0xcfd9ff, waterColor: 0x00141f, distortionScale: 3.2, fog: false,
+  });
+  water.rotation.x = -Math.PI / 2; scene.add(water);
+  const under = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.ShaderMaterial({
+    uniforms: { uTime: uniforms.uTime, uHue: uniforms.uHue, uCam: { value: new THREE.Vector3() } },
+    vertexShader: "varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }",
+    fragmentShader: /* glsl */ `uniform float uTime, uHue; uniform vec3 uCam; varying vec3 vW;
+      ${NOISE_GLSL}
+      void main() {
+        vec3 v = normalize(vW - uCam);
+        float cosT = abs(v.y);
+        float window = smoothstep(0.6, 0.72, cosT);                                  // Snell's window
+        float rip = fbm3(vW.xz * 0.08 + uTime * 0.12);
+        float caus = pow(1.0 - abs(sin(fbm3(vW.xz * 0.25 + uTime * 0.3) * 10.0)), 8.0);
+        vec3 bright = mix(vec3(0.35, 0.55, 0.7), hsv(fract(uHue), 0.4, 0.9), 0.25) * (0.6 + rip * 0.6 + caus * 0.5);
+        vec3 dark = vec3(0.01, 0.06, 0.09) * (0.8 + rip * 0.4);
+        float dist = length(vW - uCam);
+        vec3 col = mix(dark, bright, window);
+        col = mix(col, vec3(0.02, 0.13, 0.18), 1.0 - exp(-dist * 0.012));
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+    side: THREE.DoubleSide,
+  }));
+  under.rotation.x = Math.PI / 2; under.position.y = 0.05; scene.add(under);
+
+  // lights
+  const moonLight = new THREE.DirectionalLight(0xbfcaff, 0.9); moonLight.position.copy(MOON).multiplyScalar(100); scene.add(moonLight);
+  const hemi = new THREE.HemisphereLight(0x4a6a9a, 0x05080f, 0.6); scene.add(hemi);
+
+  // cloud deck between 140 and 280 units up: we fall through it
+  const cloudTex = [11, 23, 37].map(cloudTexture);
+  const clouds = new THREE.Group(); scene.add(clouds);
+  let seed = 5; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 70; i++) {
+    const m = new THREE.SpriteMaterial({ map: cloudTex[i % 3], color: 0x9aa4c4, transparent: true, depthWrite: false, opacity: 0.85, fog: false });
+    const sp = new THREE.Sprite(m);
+    const w = 120 + rnd() * 260; sp.scale.set(w, w * 0.55, 1);
+    sp.position.set((rnd() - 0.5) * 900, 140 + rnd() * 140, -60 - rnd() * 700);
+    clouds.add(sp);
+  }
+
+  // underwater: light shafts, marine snow, fish, jellyfish, seafloor, submarine
+  const shafts = new THREE.Mesh((() => { const gg = new THREE.CylinderGeometry(30, 70, 90, 64, 1, true); gg.translate(0, -45, 0); return gg; })(), new THREE.ShaderMaterial({
+    uniforms: { uTime: uniforms.uTime, uHue: uniforms.uHue },
+    vertexShader: "varying vec3 vP; varying vec2 vUv; void main() { vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: /* glsl */ `uniform float uTime, uHue; varying vec3 vP; varying vec2 vUv;
+      ${NOISE_GLSL}
+      void main() {
+        float a = atan(vP.z, vP.x);
+        float rays = pow(fbm3(vec2(a * 9.0 + uTime * 0.05, uTime * 0.02)), 3.0) * 3.0;
+        float fade = smoothstep(0.0, 0.25, vUv.y) * vUv.y;                         // bright near the surface
+        gl_FragColor = vec4(mix(vec3(0.55, 0.8, 0.95), hsv(fract(uHue), 0.5, 1.0), 0.3), rays * fade * 0.22);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  }));
+  scene.add(shafts);
+
+  const dot = softDot();
+  const snowGeo = new THREE.BufferGeometry(), snowPos = [];
+  for (let i = 0; i < (mobile ? 1200 : 3000); i++) snowPos.push((rnd() - 0.5) * 120, -rnd() * 150, -rnd() * 90 + 10);
+  snowGeo.setAttribute("position", new THREE.Float32BufferAttribute(snowPos, 3));
+  const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({ map: dot, size: 0.35, color: 0xbfd6e0, transparent: true, opacity: 0.55, depthWrite: false, fog: true }));
+  scene.add(snow);
+
+  const fishGeo = (() => {
+    const body = new THREE.SphereGeometry(1, 12, 8); body.scale(0.9, 0.32, 0.14);
+    const tail = new THREE.ConeGeometry(0.28, 0.5, 4); tail.rotateZ(Math.PI / 2); tail.translate(1.05, 0, 0); tail.scale(1, 1, 0.3);
+    const merged = new THREE.BufferGeometry();
+    const pos = [], nor = [];
+    [body.toNonIndexed(), tail.toNonIndexed()].forEach((p) => { p.computeVertexNormals(); pos.push(...p.attributes.position.array); nor.push(...p.attributes.normal.array); });
+    merged.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    merged.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    return merged;
+  })();
+  const FISH = mobile ? 80 : 160;
+  const fish = new THREE.InstancedMesh(fishGeo, new THREE.MeshStandardMaterial({ color: 0x9fb8c8, metalness: 0.7, roughness: 0.3 }), FISH);
+  const fishData = Array.from({ length: FISH }, () => ({ r: 6 + rnd() * 10, ph: rnd() * Math.PI * 2, y: (rnd() - 0.5) * 7, sp: 0.18 + rnd() * 0.06, s: 0.35 + rnd() * 0.3 }));
+  scene.add(fish);
+
+  const jellies = [
+    [20, -60, -34, 2.1, 0.55, 0.0], [26, -76, -44, 1.6, 0.7, 0.3], [16, -90, -28, 1.3, 0.62, 0.55],
+    [30, -100, -52, 2.4, 0.8, 0.15], [36, -84, -60, 1.6, 0.5, 0.75], [22, -114, -34, 1.1, 0.9, 0.4],
+  ].map(([x, y, z, s, off, ph]) => { const j = jellyfish(uniforms, off, s, ph); j.position.set(x, y, z); j.userData.base = y; scene.add(j); return j; });
+
+  const floorGeo = new THREE.PlaneGeometry(500, 500, 160, 160); floorGeo.rotateX(-Math.PI / 2);
+  {
+    const p = floorGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i);
+      const dune = Math.sin(x * 0.08 + Math.sin(z * 0.05)) * 0.8 + Math.sin(z * 0.11 + x * 0.03) * 0.6;
+      const rock = Math.max(0, Math.sin(x * 0.21) * Math.cos(z * 0.17) - 0.6) * 6;
+      p.setY(i, dune + rock);
+    }
+    floorGeo.computeVertexNormals();
+  }
+  const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x6a6455, roughness: 0.95 }));
+  floor.position.y = -142; scene.add(floor);
+  const glowGeo = new THREE.BufferGeometry(), glowPos = [];
+  for (let i = 0; i < 400; i++) glowPos.push((rnd() - 0.5) * 160, -141 + rnd() * 3, -rnd() * 120 + 10);
+  glowGeo.setAttribute("position", new THREE.Float32BufferAttribute(glowPos, 3));
+  const glowMat = new THREE.PointsMaterial({ map: dot, size: 0.6, color: 0x55ffcc, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const glow = new THREE.Points(glowGeo, glowMat); scene.add(glow);
+  const sub = submarine(uniforms); sub.position.set(12, -133, -30); sub.rotation.y = 0.4; sub.scale.setScalar(1.1); scene.add(sub);
+
+  const fog = new THREE.FogExp2(0x0a3a4c, 0.02);
+  const fogStops = [[0, 0x0e4f63, 0.016], [1, 0x07324a, 0.02], [2, 0x041a2c, 0.026], [3, 0x02080f, 0.03]];
+  const cA = new THREE.Color(), cB = new THREE.Color();
+
   function resize() {
-    renderer.setPixelRatio(1);
-    renderer.setSize(Math.ceil(innerWidth * scale), Math.ceil(innerHeight * scale), false);
-    uniforms.uRes.value.set(Math.ceil(innerWidth * scale), Math.ceil(innerHeight * scale));
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * scale);
+    renderer.setSize(innerWidth, innerHeight, false);
+    camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   }
   resize();
+
+  const tmp = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  let last = 0;
   return {
     resize,
     draw(time, stage, scroll, hue, pointerX) {
-      uniforms.uTime.value = reduceMotion ? 0 : time / 1000;
-      uniforms.uStage.value = stage; uniforms.uScroll.value = scroll; uniforms.uHue.value = hue; uniforms.uPointer.value = pointerX;
-      renderer.render(scene, cam);
+      const t = reduceMotion ? 0 : time / 1000, dt = Math.min(0.05, Math.max(0, t - last)); last = t;
+      uniforms.uTime.value = t; uniforms.uHue.value = hue;
+      const y = along(PATH_Y, stage), pitch = along(PATH_PITCH, stage);
+      camera.position.set(pointerX * 3, y, 0);
+      camera.rotation.set(pitch, pointerX * -0.05, 0, "YXZ");
+      dome.position.copy(camera.position);
+      const above = y > 0;
+      dome.visible = water.visible = clouds.visible = above;
+      under.visible = shafts.visible = !above;
+      snow.visible = fish.visible = !above && y > -100;
+      jellies.forEach((j) => (j.visible = !above && y < -30));
+      glow.visible = sub.visible = floor.visible = !above && y < -60;
+      if (above) {
+        scene.fog = null; scene.background = null;
+        water.material.uniforms.time.value += dt * 0.6;
+        moonLight.intensity = 0.9; hemi.intensity = 0.6;
+      } else {
+        const d = Math.min(3, Math.max(0, (-y / 128) * 3));
+        const i = Math.min(2, Math.floor(d)), k = d - i;
+        cA.setHex(fogStops[i][1]); cB.setHex(fogStops[i + 1][1]); cA.lerp(cB, k);
+        fog.color.copy(cA); fog.density = fogStops[i][2] + (fogStops[i + 1][2] - fogStops[i][2]) * k;
+        scene.fog = fog; scene.background = fog.color;
+        under.material.uniforms.uCam.value.copy(camera.position);
+        shafts.position.set(camera.position.x, 0, -20);
+        hemi.intensity = 0.6 * (1 - d / 3) + 0.08;
+        moonLight.intensity = 0.9 * (1 - d / 3);
+        fishData.forEach((f, n) => {
+          const a = f.ph + t * f.sp;
+          v.set(Math.cos(a) * f.r, -24 + f.y + Math.sin(a * 2 + n) * 0.8, -30 + Math.sin(a) * f.r * 0.6);
+          e.set(0, -a - Math.PI / 2, Math.sin(t * 6 + n) * 0.08); q.setFromEuler(e);
+          tmp.compose(v, q, sc.setScalar(f.s)); fish.setMatrixAt(n, tmp);
+        });
+        fish.instanceMatrix.needsUpdate = true;
+        jellies.forEach((j, n) => { j.position.y = j.userData.base + Math.sin(t * 0.3 + n) * 1.5; j.rotation.y = t * 0.05 * (n % 2 ? 1 : -1); });
+        glowMat.color.setHSL(hue % 1, 0.8, 0.6);
+        sub.userData.update(t);
+      }
+      renderer.render(scene, camera);
     },
   };
 }
