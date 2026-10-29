@@ -14,6 +14,7 @@ const DESIGN = {
   pillars: { w: 1280, h: 380, crop: [10, 270] },
   metrics: { w: 1280, h: 400, crop: [18, 250] },
   footer: { w: 1280, h: 420 },
+  archipelago: { w: 1280, h: 720 },
 };
 
 // Show the design composition (offset by offX/offY design pixels, vertical band top..bottom) in a canvas of
@@ -57,7 +58,7 @@ class Stage {
     this.aspect = w / h;
     const d = DESIGN[this.name];
     if (this.name === "footer" && isMobile()) fitView(this.camera, d, this.aspect, d.w * 0.16, 0);
-    else if (this.name !== "hero") fitView(this.camera, d, this.aspect, this.base.x, this.base.y, ...(d.crop || []));
+    else if (this.name !== "hero" && this.name !== "archipelago") fitView(this.camera, d, this.aspect, this.base.x, this.base.y, ...(d.crop || []));
   }
 
   render(time) {
@@ -140,6 +141,37 @@ function updateHero(stage, s) {
   heroOutro.style.opacity = String(o);
   heroScrim.style.opacity = String(o);
   heroOutro.style.transform = `translateX(-50%) translateY(${(1 - o) * 40}px)`;
+}
+
+// ---------- seasonal islands: each band flies the camera past its island ----------
+const bands = [...document.querySelectorAll(".season-band")];
+function updateArchipelago(stage) {
+  const vh = innerHeight;
+  let best = null;
+  for (const band of bands) {
+    const r = band.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > vh) continue;
+    const t = clamp((vh - r.top) / (r.height + vh)); // 0 when the band enters, 1 when it leaves
+    const vis = smooth(0, 0.18, t) * (1 - smooth(0.82, 1, t));
+    if (!best || vis > best.vis) best = { band, t, vis };
+  }
+  stage.canvas.style.opacity = best ? best.vis.toFixed(3) : "0";
+  stage.active = !!best && best.vis > 0.001;
+  if (!stage.active) return;
+  const i = parseInt(best.band.dataset.season, 10), t = best.t;
+  const isle = stage.camera.userData.isles[i].position;
+  const cam = stage.camera, d = DESIGN.archipelago;
+  // orbit a little while the island rises through the screen (it moves faster than the text: parallax)
+  const yaw = (i % 2 ? 0.55 : -0.55) + (t - 0.5) * 1.1 + 0.06 * pointer.x;
+  const elev = 0.32 + 0.12 * (t - 0.5);
+  const dist = isMobile() ? 7.6 : 10.5;
+  const lookY = isle.y + 0.4 + (0.5 - t) * 5.5;
+  cam.position.set(isle.x + Math.sin(yaw) * Math.cos(elev) * dist, lookY + Math.sin(elev) * dist, isle.z + Math.cos(yaw) * Math.cos(elev) * dist);
+  cam.lookAt(isle.x, lookY, isle.z);
+  // keep the island on the side opposite the caption
+  const side = best.band.classList.contains("right") ? 1 : -1;
+  if (isMobile()) fitView(cam, d, stage.aspect, 0, -d.h * 0.18);
+  else fitView(cam, d, stage.aspect, side * d.w * 0.2, 0);
 }
 
 // ---------- work: vertical scroll drives a horizontal gallery ----------
@@ -292,6 +324,8 @@ Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).
 });
 
 const heroStage = stages.find((s) => s.name === "hero");
+const archStage = stages.find((s) => s.name === "archipelago");
+if (archStage) watcher.unobserve(archStage.canvas); // fixed canvas: visibility comes from the bands
 function frame(time) {
   if (heroStage && heroStage.visible) updateHero(heroStage, reduceMotion ? 0 : sectionProgress(hero));
   if (!reduceMotion) { updateLayers(); updateWork(); }
@@ -299,7 +333,8 @@ function frame(time) {
   updateChrome();
   drawSky(time);
   updateCursor();
-  for (const st of stages) if (st.visible) st.render(time);
+  if (archStage) { updateArchipelago(archStage); if (archStage.active) archStage.render(time); }
+  for (const st of stages) if (st.visible && st !== archStage) st.render(time);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

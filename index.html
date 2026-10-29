@@ -26,6 +26,7 @@
 </div>
 
 <canvas class="starfield" aria-hidden="true"></canvas>
+<canvas class="stage archipelago" data-world="archipelago" aria-hidden="true"></canvas>
 <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
 <div class="progress" aria-hidden="true"><span></span></div>
 
@@ -33,8 +34,8 @@
   <a class="brand mono" href="#top" aria-label="Back to top"><span class="brand-dot"></span>arya.refman</a>
   <nav aria-label="Sections">
     <a href="#about">About</a>
-    <a href="#awards">Awards</a>
     <a href="#work">Work</a>
+    <a href="#awards">Awards</a>
     <a href="#contact" class="nav-cta">Contact</a>
   </nav>
 </header>
@@ -77,7 +78,7 @@
     <div class="about-grid">
       <div class="portrait reveal">
         <div class="orbit-rings" data-speed="0.06" aria-hidden="true"><i></i><i></i><i></i></div>
-        <img src="img/arya-city.png" alt="Arya smiling in a white cap and green sweater" data-speed="-0.05" width="520" height="566" loading="lazy" />
+        <img src="img/arya-city.webp" alt="Arya smiling in a white cap and green sweater" data-speed="-0.05" width="820" height="910" loading="lazy" />
       </div>
       <div class="about-copy">
         <p class="kicker mono reveal">01 · ABOUT ME</p>
@@ -92,46 +93,18 @@
     </div>
   </section>
 
-  <!-- AWARDS -->
-  <section id="awards" class="section awards">
-    <p class="kicker mono reveal">02 · AWARDS</p>
-    <h2 class="reveal">On the podium</h2>
-    <div class="award-grid">
-      <a class="award gold reveal" href="https://semoga-kami-beruntung.vercel.app/">
-        <span class="award-rank">2<sup>nd</sup></span>
-        <span class="award-medal" aria-hidden="true">🥈</span>
-        <h3>AlgoVerse</h3>
-        <p>AR visualisation of data structures and algorithms in the phone browser.</p>
-        <p class="award-event mono">IT FEST 2026 · UNIVERSITAS BRAWIJAYA</p>
-      </a>
-      <a class="award gold reveal" href="https://cyberhack-digendong-bokem.vercel.app/">
-        <span class="award-rank">2<sup>nd</sup></span>
-        <span class="award-medal" aria-hidden="true">🥈</span>
-        <h3>AromaSys</h3>
-        <p>Warehouse intelligence: digital twin, vision QC and an AI operations copilot.</p>
-        <p class="award-event mono">HACKATHON · 2026</p>
-      </a>
-      <a class="award reveal" href="https://github.com/aryarefman/migas-siews">
-        <span class="award-rank">Final</span>
-        <span class="award-medal" aria-hidden="true">🏅</span>
-        <h3>SIEWS+ 5.0</h3>
-        <p>YOLOv8 red-zone and PPE detection with fail-safe shutdown for oil and gas.</p>
-        <p class="award-event mono">IOC DIGITAL HACKATHON 2026</p>
-      </a>
-      <a class="award reveal" href="https://github.com/aryarefman/analisis-AQI-Dunia">
-        <span class="award-rank">Final</span>
-        <span class="award-medal" aria-hidden="true">🏅</span>
-        <h3>Global AQI analysis</h3>
-        <p>Exploratory and geospatial analysis of world air-quality data.</p>
-        <p class="award-event mono">DATA ANALYTICS COMPETITION</p>
-      </a>
+  <!-- SPRING ISLAND -->
+  <section class="season-band left" data-season="0" aria-label="spring island">
+    <div class="season-copy">
+      <p class="kicker mono" style="color:#ff94c2">SPRING ISLAND</p>
+      <h2>Ideas take root.</h2>
+      <p>Every build starts as a small question: will this field dry out, will the smoke reach town, can a student see a binary tree?</p>
     </div>
-    <p class="also reveal"><span class="mono">ALSO COMPETED</span> UM Metro Hackathon 2026 · JOINTS UGM 2026 · ForgeHacks Online 2026</p>
   </section>
 
   <!-- PILLARS -->
   <section class="section pillars" aria-label="What I work on">
-    <p class="kicker mono reveal center">03 · WHAT I WORK ON</p>
+    <p class="kicker mono reveal center">02 · WHAT I WORK ON</p>
     <div class="stage-wrap pillars-wrap"><canvas class="stage" data-world="pillars" aria-hidden="true"></canvas></div>
     <div class="pillar-row">
       <article class="pillar reveal"><p class="mono t-see">01 / SEE</p><h3>Perception</h3><p>YOLOv8 geofencing, PPE checks, Sentinel radar and optical imagery, WebAR.</p></article>
@@ -152,11 +125,20 @@
     </div>
   </section>
 
+  <!-- SUMMER ISLAND -->
+  <section class="season-band right" data-season="1" aria-label="summer island">
+    <div class="season-copy">
+      <p class="kicker mono" style="color:#ffd27a">SUMMER ISLAND</p>
+      <h2>Hackathon season.</h2>
+      <p>From UM Metro and JOINTS UGM to IT Fest UB: long nights, short deadlines, real demos.</p>
+    </div>
+  </section>
+
   <!-- WORK: pinned horizontal gallery on desktop -->
   <section id="work" class="work">
     <div class="work-pin">
       <header class="work-head">
-        <p class="kicker mono">04 · FEATURED WORK</p>
+        <p class="kicker mono">03 · FEATURED WORK</p>
         <h2>Selected projects</h2>
         <p class="work-count mono"><span class="work-index">01</span> / 08</p>
       </header>
@@ -246,6 +228,61 @@
     </div>
   </section>
 
+  <!-- AUTUMN ISLAND -->
+  <section class="season-band left" data-season="2" aria-label="autumn island">
+    <div class="season-copy">
+      <p class="kicker mono" style="color:#ff8a3d">AUTUMN ISLAND</p>
+      <h2>The harvest.</h2>
+      <p>Two silver medals and two finals, earned by shipping things that work in front of judges.</p>
+    </div>
+  </section>
+
+  <!-- AWARDS -->
+  <section id="awards" class="section awards">
+    <p class="kicker mono reveal">04 · AWARDS</p>
+    <h2 class="reveal">On the podium</h2>
+    <div class="award-grid">
+      <a class="award gold reveal" href="https://semoga-kami-beruntung.vercel.app/">
+        <span class="award-rank">2<sup>nd</sup></span>
+        <span class="award-medal" aria-hidden="true">🥈</span>
+        <h3>AlgoVerse</h3>
+        <p>AR visualisation of data structures and algorithms in the phone browser.</p>
+        <p class="award-event mono">IT FEST 2026 · UNIVERSITAS BRAWIJAYA</p>
+      </a>
+      <a class="award gold reveal" href="https://cyberhack-digendong-bokem.vercel.app/">
+        <span class="award-rank">2<sup>nd</sup></span>
+        <span class="award-medal" aria-hidden="true">🥈</span>
+        <h3>AromaSys</h3>
+        <p>Warehouse intelligence: digital twin, vision QC and an AI operations copilot.</p>
+        <p class="award-event mono">HACKATHON · 2026</p>
+      </a>
+      <a class="award reveal" href="https://github.com/aryarefman/migas-siews">
+        <span class="award-rank">Final</span>
+        <span class="award-medal" aria-hidden="true">🏅</span>
+        <h3>SIEWS+ 5.0</h3>
+        <p>YOLOv8 red-zone and PPE detection with fail-safe shutdown for oil and gas.</p>
+        <p class="award-event mono">IOC DIGITAL HACKATHON 2026</p>
+      </a>
+      <a class="award reveal" href="https://github.com/aryarefman/analisis-AQI-Dunia">
+        <span class="award-rank">Final</span>
+        <span class="award-medal" aria-hidden="true">🏅</span>
+        <h3>Global AQI analysis</h3>
+        <p>Exploratory and geospatial analysis of world air-quality data.</p>
+        <p class="award-event mono">DATA ANALYTICS COMPETITION</p>
+      </a>
+    </div>
+    <p class="also reveal"><span class="mono">ALSO COMPETED</span> UM Metro Hackathon 2026 · JOINTS UGM 2026 · ForgeHacks Online 2026</p>
+  </section>
+
+  <!-- WINTER ISLAND -->
+  <section class="season-band right" data-season="3" aria-label="winter island">
+    <div class="season-copy">
+      <p class="kicker mono" style="color:#bfe6ff">WINTER ISLAND</p>
+      <h2>Quiet research.</h2>
+      <p>The slow months: reading 2,812 papers, writing about LLM agent safety, and learning with other teams.</p>
+    </div>
+  </section>
+
   <!-- TEAMS + RESEARCH -->
   <section id="team" class="section team">
     <p class="ghost" data-speed="-0.2" aria-hidden="true">TEAMS</p>
@@ -279,7 +316,7 @@
   <!-- CONTACT -->
   <section id="contact" class="contact">
     <canvas class="stage" data-world="footer" aria-hidden="true"></canvas>
-    <img class="me" src="img/arya-waterfall.png" alt="Arya smiling in a brown t-shirt" data-speed="0.1" loading="lazy" width="380" height="599" />
+    <img class="me" src="img/arya-waterfall.webp" alt="Arya smiling in a brown t-shirt" data-speed="0.1" loading="lazy" width="760" height="1264" />
     <div class="contact-copy">
       <p class="kicker mono">07 · CONTACT</p>
       <h2>Let's build<br />something.</h2>

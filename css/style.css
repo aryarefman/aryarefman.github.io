@@ -234,6 +234,16 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 .reveal.in { opacity: 1; transform: none; }
 .award-grid .reveal:nth-child(2) { transition-delay: 0.08s; } .award-grid .reveal:nth-child(3) { transition-delay: 0.16s; } .award-grid .reveal:nth-child(4) { transition-delay: 0.24s; }
 
+/* seasonal island bands: the island itself is drawn on the fixed .archipelago canvas */
+.archipelago { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0; }
+main, .foot { position: relative; z-index: 1; }
+.season-band { position: relative; height: 150vh; display: flex; align-items: center; padding: 0 var(--pad); }
+.season-copy { position: sticky; top: 30vh; max-width: 460px; }
+.season-band.right { justify-content: flex-end; }
+.season-copy h2 { font-size: clamp(40px, 5.6vw, 76px); margin: 12px 0 16px; }
+.season-copy > p:not(.kicker) { color: var(--muted); font-size: 18px; }
+.season-copy .kicker { font-weight: 600; }
+
 /* responsive */
 @media (max-width: 1080px) {
   .award-grid { grid-template-columns: repeat(2, 1fr); }
@@ -264,6 +274,9 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
   .pillar-row { grid-template-columns: 1fr; gap: 28px; }
   .pillars-wrap { aspect-ratio: 1280 / 330; }
   .numbers-wrap { display: none; }
+  .season-band { height: 130vh; align-items: flex-start; }
+  .season-copy { top: 88px; padding-top: 88px; }
+  .season-band.right { justify-content: flex-start; }
   .facts div { grid-template-columns: 1fr; gap: 4px; }
   .contact { min-height: 0; }
   .contact-copy { padding: 100px var(--pad) 380px; }
