@@ -1,0 +1,93 @@
+{
+  "sea_turtle": {
+    "name": "Model 53A - Flatback Sea Turtle",
+    "author": "DigitalLife3D",
+    "author_url": "https://sketchfab.com/DigitalLife3D",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/model-53a-flatback-sea-turtle-442372b7f02b4730882d41d959726156"
+  },
+  "dolphin": {
+    "name": "Bottlenose Dolphin",
+    "author": "popcornbag",
+    "author_url": "https://sketchfab.com/popcornbag",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/bottlenose-dolphin-4bb04fa58d6846938e07bb38507e3f3a"
+  },
+  "humpback_whale": {
+    "name": "Humpback Whale (Swimming)",
+    "author": "Connlan_Immure",
+    "author_url": "https://sketchfab.com/Connlan_Immure",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/humpback-whale-swimming-f4912be9163a4f45b2480df8ccb8b2c6"
+  },
+  "whale_shark": {
+    "name": "Whale Shark Game Ready",
+    "author": "kenchoo",
+    "author_url": "https://sketchfab.com/kenchoo",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/whale-shark-game-ready-e32a1b2715384935a7f23d1498463339"
+  },
+  "hammerhead": {
+    "name": "Hammerhead Shark",
+    "author": "kenchoo",
+    "author_url": "https://sketchfab.com/kenchoo",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/hammerhead-shark-1bb18da3050843f687de6753fb31b7c5"
+  },
+  "manta_ray": {
+    "name": "Manta Ray",
+    "author": "s4306270",
+    "author_url": "https://sketchfab.com/s4306270",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/manta-ray-a5a49438893e4bd1b82cad7b69a95edf"
+  },
+  "jellyfish": {
+    "name": "Crystal Jellyfish (Leptomedusae)",
+    "author": "n-",
+    "author_url": "https://sketchfab.com/n-",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/crystal-jellyfish-leptomedusae-38ac0d91213d447eb3366f615298ce8f"
+  },
+  "octopus": {
+    "name": "Octopus",
+    "author": "kenchoo",
+    "author_url": "https://sketchfab.com/kenchoo",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/octopus-330402cc0ade4fc5bb147f3d618e58c3"
+  },
+  "clownfish": {
+    "name": "Clownfish",
+    "author": "kenchoo",
+    "author_url": "https://sketchfab.com/kenchoo",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/clownfish-e6db2c191bf346398087ba27de9b8a0a"
+  },
+  "anglerfish": {
+    "name": "Anglerfish",
+    "author": "Abby_Holzworth1",
+    "author_url": "https://sketchfab.com/Abby_Holzworth1",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/anglerfish-5e2f4b2d2e1a4613a008b6caaf40d50c"
+  },
+  "coral": {
+    "name": "Soft Coral Set",
+    "author": "Kanna-nakajima",
+    "author_url": "https://sketchfab.com/Kanna-nakajima",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/soft-coral-set-256355f15fcb4095af17b75ae572bff0"
+  },
+  "seaweed": {
+    "name": "Kelp",
+    "author": "crammyberry",
+    "author_url": "https://sketchfab.com/crammyberry",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/kelp-d0a48e3e3b27461f99435d3b3c09fd1d"
+  },
+  "pirate_ship": {
+    "name": "The Siren's Light Pirate Ship",
+    "author": "krimsun",
+    "author_url": "https://sketchfab.com/krimsun",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/the-sirens-light-pirate-ship-01d53ebc2b2148cd972c491eefa02c03"
+  }
+}

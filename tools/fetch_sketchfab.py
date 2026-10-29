@@ -24,21 +24,29 @@ API = "https://api.sketchfab.com/v3"
 UA = "aryarefman-portfolio-fetch/1.0"
 LICENSES = ["cc0", "by"]           # CC0 and CC BY only: free to use with attribution
 
-# key: (search query, max faces for the web, wants animation)
+# key: (search query, words the name/tags must contain, words that disqualify, max faces, wants animation)
 WANT = {
-    "sea_turtle": ("sea turtle swimming", 60000, True),
-    "dolphin": ("dolphin swimming", 40000, True),
-    "humpback_whale": ("humpback whale", 80000, True),
-    "whale_shark": ("whale shark", 80000, True),
-    "hammerhead": ("hammerhead shark", 60000, True),
-    "manta_ray": ("manta ray", 40000, True),
-    "jellyfish": ("jellyfish animated", 60000, True),
-    "octopus": ("octopus", 60000, True),
-    "clownfish": ("clownfish", 20000, True),
-    "anglerfish": ("anglerfish", 60000, False),
-    "coral": ("coral reef", 120000, False),
-    "seaweed": ("kelp seaweed", 60000, True),
-    "pirate_ship": ("pirate ship", 150000, False),
+    "sea_turtle": ("sea turtle", ["turtle"], ["cartoon", "toon", "monster", "kawaii"], 80000, True),
+    "dolphin": ("dolphin", ["dolphin"], ["cartoon", "toon", "cute"], 60000, True),
+    "humpback_whale": ("humpback whale", ["humpback", "whale"], ["cartoon", "toon"], 80000, True),
+    "whale_shark": ("whale shark", ["whale shark", "whaleshark", "rhincodon"], ["cartoon", "toon"], 100000, True),
+    "hammerhead": ("hammerhead shark", ["hammerhead"], ["cartoon", "toon"], 80000, True),
+    "manta_ray": ("manta ray", ["manta"], ["cartoon", "toon"], 60000, True),
+    "jellyfish": ("jellyfish", ["jellyfish", "jelly fish", "medusa"], ["cartoon", "toon", "spongebob"], 80000, True),
+    "octopus": ("octopus", ["octopus"], ["cartoon", "toon", "cute", "character", "girl"], 80000, True),
+    "clownfish": ("clownfish", ["clownfish", "clown fish", "amphiprion"], ["cartoon", "toon", "nemo"], 30000, True),
+    "anglerfish": ("anglerfish", ["angler"], ["cartoon", "toon"], 80000, False),
+    "coral": ("coral", ["coral"], ["cartoon", "toon"], 150000, False),
+    "seaweed": ("kelp seaweed", ["kelp", "seaweed"], ["cartoon", "toon"], 80000, False),
+    "pirate_ship": ("pirate ship", ["pirate ship", "galleon", "frigate", "brig"], ["cartoon", "toon", "kids"], 200000, False),
+}
+# models checked by hand during research: preferred when they are still downloadable
+PREFERRED = {
+    "sea_turtle": "23dcb315dea44f5082b020b04710bd31",
+    "dolphin": "f4abb460956240f98b7a6f19cc3037a1",
+    "humpback_whale": "f4912be9163a4f45b2480df8ccb8b2c6",
+    "hammerhead": "7ff21a2134ef41a483278063f76712e4",
+    "jellyfish": "a2645d543a7246b3aad9c352407f6456",
 }
 
 
@@ -64,11 +72,21 @@ def score(m, max_faces, animated):
     return s
 
 
-def search(query, max_faces, animated):
-    res = call(f"{API}/search", {"type": "models", "q": query, "downloadable": "true", "license": LICENSES,
-                                  "sort_by": "-likeCount", "count": 24})
-    ranked = sorted(res.get("results", []), key=lambda m: score(m, max_faces, animated), reverse=True)
-    return [m for m in ranked if score(m, max_faces, animated) > 0]
+def relevant(m, must, never):
+    text = (m.get("name", "") + " " + " ".join(t.get("name", "") for t in m.get("tags", []))).lower()
+    return any(w in text for w in must) and not any(w in text for w in never)
+
+
+def search(query, must, never, max_faces, animated):
+    found, url, params = [], f"{API}/search", {"type": "models", "q": query, "downloadable": "true", "license": LICENSES, "count": 24}
+    for _ in range(3):                                   # up to 72 results
+        res = call(url, params)
+        found += res.get("results", [])
+        url, params = res.get("next"), None
+        if not url:
+            break
+    ok = [m for m in found if relevant(m, must, never) and score(m, max_faces, animated) > 0]
+    return sorted(ok, key=lambda m: score(m, max_faces, animated), reverse=True)
 
 
 def download(uid, dest):
@@ -89,9 +107,16 @@ def main(dry):
     OUT.mkdir(parents=True, exist_ok=True)
     credits_path = OUT / "credits.json"
     credits = json.loads(credits_path.read_text(encoding="utf8")) if credits_path.exists() else {}
-    for key, (query, max_faces, animated) in WANT.items():
+    for key, (query, must, never, max_faces, animated) in WANT.items():
         try:
-            picks = search(query, max_faces, animated)
+            picks = search(query, must, never, max_faces, animated)
+            if key in PREFERRED:
+                try:
+                    pref = call(f"{API}/models/{PREFERRED[key]}")
+                    if pref.get("isDownloadable"):
+                        picks = [pref] + [m for m in picks if m["uid"] != pref["uid"]]
+                except Exception:  # noqa: BLE001
+                    pass
         except Exception as e:  # noqa: BLE001
             print(f"{key}: search failed: {e}"); continue
         if not picks:

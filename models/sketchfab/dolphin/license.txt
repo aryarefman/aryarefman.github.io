@@ -1,0 +1,11 @@
+Model Information:
+* title:	Bottlenose Dolphin
+* source:	https://sketchfab.com/3d-models/bottlenose-dolphin-4bb04fa58d6846938e07bb38507e3f3a
+* author:	popcornbag (https://sketchfab.com/popcornbag)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Bottlenose Dolphin" (https://sketchfab.com/3d-models/bottlenose-dolphin-4bb04fa58d6846938e07bb38507e3f3a) by popcornbag (https://sketchfab.com/popcornbag) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Manta Ray
+* source:	https://sketchfab.com/3d-models/manta-ray-a5a49438893e4bd1b82cad7b69a95edf
+* author:	s4306270 (https://sketchfab.com/s4306270)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Manta Ray" (https://sketchfab.com/3d-models/manta-ray-a5a49438893e4bd1b82cad7b69a95edf) by s4306270 (https://sketchfab.com/s4306270) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

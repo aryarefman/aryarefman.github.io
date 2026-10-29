@@ -1,0 +1,11 @@
+Model Information:
+* title:	Octopus
+* source:	https://sketchfab.com/3d-models/octopus-330402cc0ade4fc5bb147f3d618e58c3
+* author:	kenchoo (https://sketchfab.com/kenchoo)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Octopus" (https://sketchfab.com/3d-models/octopus-330402cc0ade4fc5bb147f3d618e58c3) by kenchoo (https://sketchfab.com/kenchoo) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
