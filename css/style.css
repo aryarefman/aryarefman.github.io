@@ -129,7 +129,14 @@ h3 { font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 7
 /* about */
 .about-grid { display: grid; grid-template-columns: minmax(260px, 0.9fr) 1.1fr; gap: clamp(32px, 6vw, 90px); align-items: center; }
 .portrait { position: relative; display: grid; place-items: end center; aspect-ratio: 1 / 1.05; }
-.portrait img { position: relative; z-index: 1; width: 92%; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55)); will-change: transform; }
+.portrait img {
+  position: relative; z-index: 1; width: 100%; will-change: transform;
+  /* the balcony photo melts into the page: soft fades on the left, right and bottom edges */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%), linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%), linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
+  mask-composite: intersect;
+}
 .orbit-rings { position: absolute; inset: 4% 4% 10%; will-change: transform; }
 .orbit-rings i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--line-strong); }
 .orbit-rings i:nth-child(1) { background: radial-gradient(circle at 50% 45%, rgba(124, 77, 255, 0.35), transparent 62%); border-color: rgba(139, 156, 255, 0.35); }
