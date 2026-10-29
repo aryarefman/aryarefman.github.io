@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ufo } from "./creatures.js";
-import { fishSchool, seaTurtle, jellyWhale, glowReef } from "./sealife.js";
+import { fishSchool, seaTurtle, jellyWhale, glowReef, pirateShip } from "./sealife.js";
 import { dolphin, sailfish, hammerhead, whaleShark, octopus, jellyfishV2 } from "./menagerie.js";
 
 export const STAGES = [
@@ -255,6 +255,8 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   swimmers.forEach((sw) => { sw.o.scale.setScalar(sw.s); scene.add(sw.o); });
   const octo = octopus(uniforms); octo.position.set(17, -141.6, -24); octo.rotation.y = -0.5; octo.scale.setScalar(1.6); scene.add(octo);
   // a UFO with an alien pilot drifting over the starry sky at the top of the page
+  // a pirate galleon sailing the night sea, seen as we come down to the surface
+  const ship = pirateShip(); ship.scale.setScalar(2.2); ship.position.set(30, 0, -95); ship.rotation.y = -1.9; scene.add(ship);
   const saucer = ufo(uniforms); saucer.scale.setScalar(15); saucer.userData.setBase(new THREE.Vector3(-120, 1140, -250)); scene.add(saucer);
 
   const jellies = [
@@ -323,6 +325,8 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       dome.position.copy(camera.position);
       const above = y > 0;
       dome.visible = water.visible = clouds.visible = above;
+      ship.visible = above && y < 260;
+      if (ship.visible) { ship.userData.update(t); ship.position.x = 30 - ((t * 0.8) % 80) + 20; }
       show(saucer, y > 300);
       if (saucer.userData.shown) saucer.userData.update(t);
       under.visible = !above;

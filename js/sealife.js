@@ -637,3 +637,126 @@ export function glowReef(uniforms, { centre = new THREE.Vector3(), radius = 10, 
   g.userData.light = light;
   return g;
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Pirate galleon: a planked wooden hull with a raised stern castle, three masts with billowing square sails,
+// a Jolly Roger, rigging, and warm lanterns. Local frame: bow toward +z, waterline at y = 0.
+// ---------------------------------------------------------------------------------------------------------------
+function plankMaterial(base, dark) {
+  const m = new THREE.MeshStandardMaterial({ color: base, roughness: 0.75 });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vPl;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPl = position;");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vPl;\nfloat ph(float x) { return fract(sin(x * 91.7) * 4375.85); }")
+      .replace("#include <color_fragment>", `#include <color_fragment>
+        float row = floor(vPl.y * 9.0);
+        float seam = smoothstep(0.44, 0.5, abs(fract(vPl.y * 9.0) - 0.5));          // dark line between planks
+        float butt = smoothstep(0.48, 0.5, abs(fract(vPl.z * 0.7 + ph(row)) - 0.5));  // plank ends, staggered per row
+        diffuseColor.rgb *= 0.82 + 0.3 * ph(row + 3.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, ${glsl3(new THREE.Color(dark))}, max(seam, butt) * 0.8);`);
+  };
+  return m;
+}
+
+export function pirateShip() {
+  const g = new THREE.Group();
+  const wood = plankMaterial(0x8a5a32, 0x2a180c), darkWood = plankMaterial(0x4a2f1c, 0x1a0f07);
+  const trim = new THREE.MeshStandardMaterial({ color: 0xb08a3a, roughness: 0.4, metalness: 0.6 });
+  // hull: lofted along z, a rounded U section narrowing to the bow, flat transom at the stern
+  const L = 12, NU = 40, NV = 24, pos = [], idx = [];
+  const halfW = (u) => 1.9 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + u * 0.95)), 0.6) * (u > 0.75 ? 1 - (u - 0.75) * 1.6 : 1);
+  const keel = (u) => -1.7 + 0.5 * Math.pow(Math.abs(u - 0.45) * 2, 3);
+  const sheer = (u) => 1.1 + 1.0 * Math.pow(Math.max(0, 0.3 - u) / 0.3, 1.5) + 0.6 * Math.pow(Math.max(0, u - 0.8) / 0.2, 2);  // stern castle and bow rise
+  for (let i = 0; i <= NU; i++) {
+    const u = i / NU, z = (u - 0.5) * L, w = Math.max(0.05, halfW(u)), k = keel(u), top = sheer(u);
+    for (let j = 0; j <= NV; j++) {
+      const a = (j / NV) * Math.PI;                       // 0 port rail → π starboard rail, through the keel
+      const x = -Math.cos(a) * w * (1 - 0.12 * Math.pow(Math.sin(a), 6));
+      const y = top + (k - top) * Math.pow(Math.sin(a), 0.7);
+      pos.push(x, y, z);
+    }
+  }
+  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) { const a = i * (NV + 1) + j, b = a + NV + 1; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+  const hullGeo = new THREE.BufferGeometry(); hullGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); hullGeo.setIndex(idx); hullGeo.computeVertexNormals();
+  const hull = new THREE.Mesh(hullGeo, new THREE.MeshStandardMaterial({ color: 0x4a2f1c, roughness: 0.8, side: THREE.DoubleSide }));
+  hull.material = wood; hull.material.side = THREE.DoubleSide; g.add(hull);
+  // gold stripe and gun ports along the hull
+  for (let i = 0; i < 7; i++) {
+    const u = 0.25 + i * 0.075, z = (u - 0.5) * L;
+    [-1, 1].forEach((s) => {
+      const port = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.32, 0.38), new THREE.MeshStandardMaterial({ color: 0x0c0806 }));
+      port.position.set(s * (halfW(u) * 0.99), 0.35, z); g.add(port);
+    });
+  }
+  // deck, stern castle and transom windows lit from inside
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.12, 8.4), darkWood); deck.position.set(0, 1.05, 0.3); g.add(deck);
+  const castle = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 2.6), wood); castle.position.set(0, 1.6, -4.4); g.add(castle);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.1, 2.7), trim); rail.position.set(0, 2.15, -4.4); g.add(rail);
+  for (let i = 0; i < 4; i++) {
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.5), new THREE.MeshBasicMaterial({ color: 0xffb456 }));
+    w.position.set(-1.05 + i * 0.7, 1.6, -5.72); w.rotation.y = Math.PI; g.add(w);
+  }
+  // bowsprit
+  const sprit = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 4, 8), darkWood); sprit.position.set(0, 2.2, 7.4); sprit.rotation.x = Math.PI / 2 - 0.35; g.add(sprit);
+  // masts with yards and billowing sails
+  const sailMat = new THREE.MeshStandardMaterial({ color: 0xe9dcc0, roughness: 0.9, side: THREE.DoubleSide });
+  sailMat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vS;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvS = uv;");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vS;")
+      .replace("#include <color_fragment>", `#include <color_fragment>
+        float seams = smoothstep(0.46, 0.5, abs(fract(vS.x * 6.0) - 0.5));
+        diffuseColor.rgb *= (0.88 + 0.12 * vS.y) * (1.0 - seams * 0.15);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.45, 0.38, 0.28), smoothstep(0.85, 1.0, 1.0 - vS.y) * 0.3);`);
+  };
+  const sails = [];
+  const sail = (w, h, billow) => {
+    const geo = new THREE.PlaneGeometry(w, h, 16, 12), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i) / (w / 2), y = p.getY(i) / (h / 2); p.setZ(i, billow * (1 - x * x) * (0.6 + 0.4 * (1 - y * y))); p.setX(i, p.getX(i) * (1 - 0.08 * (y + 1) / 2)); }
+    geo.computeVertexNormals(); return geo;
+  };
+  [[2.5, 9.5, 0.95], [-0.8, 11, 1], [-4.0, 8, 0.85]].forEach(([z, H, sc]) => {
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * sc, 0.17 * sc, H, 10), darkWood); mast.position.set(0, 1 + H / 2, z); g.add(mast);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.45 * sc, 0.4 * sc, 0.15, 12), darkWood); top.position.set(0, 1 + H * 0.66, z); g.add(top);
+    [[0.32, 3.6, 2.4], [0.6, 3.0, 2.0], [0.84, 2.3, 1.4]].forEach(([f, w, h]) => {
+      const y = 1 + H * f, ws = w * sc * 1.15, hs = h * sc * 1.15;
+      const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, ws + 0.4, 6), darkWood); yard.rotation.z = Math.PI / 2; yard.position.set(0, y + hs / 2, z + 0.05); g.add(yard);
+      const s = new THREE.Mesh(sail(ws, hs, 0.55 * sc), sailMat); s.position.set(0, y, z + 0.1); g.add(s); sails.push(s);
+    });
+  });
+  // jib sail from the bowsprit to the foremast
+  const jibGeo = new THREE.BufferGeometry(); jibGeo.setAttribute("position", new THREE.Float32BufferAttribute([0, 2.6, 8.8, 0, 9.5, 2.6, 0, 2.2, 3.4], 3)); jibGeo.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 1, 1, 0], 2)); jibGeo.computeVertexNormals();
+  g.add(new THREE.Mesh(jibGeo, sailMat));
+  // Jolly Roger on the main mast
+  const flagC = document.createElement("canvas"); flagC.width = 128; flagC.height = 80;
+  const fx = flagC.getContext("2d"); fx.fillStyle = "#0b0b0d"; fx.fillRect(0, 0, 128, 80); fx.fillStyle = "#efe8da";
+  fx.beginPath(); fx.arc(64, 34, 14, 0, Math.PI * 2); fx.fill(); fx.fillRect(56, 42, 16, 10);
+  fx.fillStyle = "#0b0b0d"; fx.beginPath(); fx.arc(58, 33, 4, 0, 6.3); fx.arc(70, 33, 4, 0, 6.3); fx.fill();
+  fx.strokeStyle = "#efe8da"; fx.lineWidth = 6; fx.beginPath(); fx.moveTo(40, 52); fx.lineTo(88, 72); fx.moveTo(88, 52); fx.lineTo(40, 72); fx.stroke();
+  const flagTex = new THREE.CanvasTexture(flagC); flagTex.colorSpace = THREE.SRGBColorSpace;
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.0, 10, 4), new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.9 }));
+  flag.position.set(0.8, 12.6, -0.8); flag.rotation.y = Math.PI / 2; g.add(flag);
+  // rigging lines from the rails up to the mast tops
+  const rig = [];
+  [[2.5, 9.5], [-0.8, 11], [-4.0, 8]].forEach(([z, H]) => [-1, 1].forEach((s) => { for (let k = 0; k < 4; k++) rig.push(s * 1.7, 1.2, z - 1 + k * 0.6, 0, 1 + H * 0.95, z); }));
+  rig.push(0, 2.6, 9.2, 0, 10.5, 2.5, 0, 12, -0.8, 0, 9, -4);
+  const rigGeo = new THREE.BufferGeometry(); rigGeo.setAttribute("position", new THREE.Float32BufferAttribute(rig, 3));
+  g.add(new THREE.LineSegments(rigGeo, new THREE.LineBasicMaterial({ color: 0x2a1c12 })));
+  // lanterns: warm glowing spheres with a halo
+  const halo = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d"), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,200,120,1)"); gr.addColorStop(0.3, "rgba(255,160,70,0.4)"); gr.addColorStop(1, "rgba(255,140,60,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const lanterns = [];
+  [[0, 2.7, -5.8], [1.5, 1.6, 2], [-1.5, 1.6, -1], [0, 3.0, 8.3]].forEach(([x, y, z]) => {
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd08a })); l.position.set(x, y, z); g.add(l);
+    const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); h.position.copy(l.position); h.scale.setScalar(2.2); g.add(h);
+    lanterns.push(h);
+  });
+  const glowLight = new THREE.PointLight(0xffa860, 30, 22, 1.4); glowLight.position.set(0, 4, -1); g.add(glowLight);   // lanterns light the deck and sails
+  g.userData.update = (t) => {
+    g.rotation.z = Math.sin(t * 0.7) * 0.04; g.rotation.x = Math.sin(t * 0.5 + 1) * 0.025;
+    g.position.y = Math.sin(t * 0.9) * 0.18 - 0.3;
+    const fp = flag.geometry.attributes.position;
+    for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(x * 3 - t * 4) * 0.12 * (x + 0.8)); }
+    fp.needsUpdate = true;
+    sails.forEach((s, i) => (s.scale.z = 1 + 0.08 * Math.sin(t * 1.3 + i)));
+    lanterns.forEach((h, i) => h.scale.setScalar(2.0 + 0.3 * Math.sin(t * 5 + i * 2)));
+  };
+  return g;
+}
