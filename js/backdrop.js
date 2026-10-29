@@ -4,6 +4,8 @@
 // `stage` runs 0 → 6: 0 starry sky · 1 aurora · 2 clouds · 3 sea surface · 4 shallow sea · 5 twilight zone · 6 abyss
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { fishSchool, seaTurtle, anglerfish, submarine, ufo } from "./creatures.js";
 
 export const STAGES = [
   { name: "Starry sky", m: 8000 },
@@ -21,8 +23,8 @@ export function metresAt(s) {
 }
 
 // camera height (scene units) and pitch along the descent
-const PATH_Y = [[0, 900], [1, 450], [2, 170], [2.85, 6], [3.15, -6], [4, -28], [5, -82], [6, -128]];
-const PATH_PITCH = [[0, 0.5], [1, 0.26], [2, 0.05], [2.85, -0.03], [3.15, -0.04], [4, -0.06], [5, -0.1], [6, -0.3]];
+const PATH_Y = [[0, 900], [1, 450], [2, 170], [2.7, 10], [3.3, -8], [4, -28], [5, -82], [6, -131]];
+const PATH_PITCH = [[0, 0.5], [1, 0.26], [2, 0.05], [2.7, -0.03], [3.3, -0.04], [4, -0.06], [5, -0.1], [6, -0.2]];
 function along(path, s) {
   if (s <= path[0][0]) return path[0][1];
   for (let i = 0; i < path.length - 1; i++) {
@@ -212,58 +214,6 @@ function jellyfish(uniforms, hueOffset, size, phase) {
   return group;
 }
 
-// ---------- research submarine with headlights ----------
-function submarine(uniforms) {
-  const g = new THREE.Group();
-  const hullMat = new THREE.MeshStandardMaterial({ color: 0xf0b13a, roughness: 0.45, metalness: 0.3, emissive: 0x3a2400, emissiveIntensity: 0.35 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2e38, roughness: 0.6, metalness: 0.5 });
-  const hull = new THREE.Mesh(new THREE.CapsuleGeometry(1.1, 3.6, 12, 32), hullMat); hull.rotation.z = Math.PI / 2; g.add(hull);
-  const tower = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 0.6, 8, 24), hullMat); tower.position.set(0.3, 1.0, 0); tower.scale.set(1.3, 1, 0.8); g.add(tower);
-  const port = new THREE.Mesh(new THREE.SphereGeometry(0.75, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0x9fd8ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.6, emissive: 0x2a6a8a, emissiveIntensity: 0.6 }));
-  port.rotation.z = Math.PI / 2; port.position.x = -2.75; g.add(port);
-  for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.CircleGeometry(0.2, 20), new THREE.MeshBasicMaterial({ color: 0xffd58a })); w.position.set(-0.8 + i * 0.8, 0.15, 1.1); g.add(w); }
-  const skid = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.12, 0.12), darkMat); skid.position.set(0, -1.35, 0.7); g.add(skid);
-  const skid2 = skid.clone(); skid2.position.z = -0.7; g.add(skid2);
-  const prop = new THREE.Group(); prop.position.x = 3.05; g.add(prop);
-  for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.22), darkMat); b.rotation.x = (k * Math.PI) / 2; prop.add(b); }
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.08), darkMat); fin.position.set(2.7, 0, 0); g.add(fin);
-  // work lights on the hull, so the sub reads in the dark
-  const work = new THREE.PointLight(0xffe2b0, 30, 14, 1.6); work.position.set(0, 3.2, 3); g.add(work);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff5040 })); beacon.position.set(0.3, 1.7, 0); g.add(beacon);
-  // headlights: spot lights that light the seafloor, plus visible beams in the water
-  const beams = [];
-  [-0.6, 0.6].forEach((z) => {
-    const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.16, 20), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    lamp.position.set(-2.4, -0.55, z); lamp.rotation.y = -Math.PI / 2; g.add(lamp);
-    const spot = new THREE.SpotLight(0xdff2ff, 60, 70, 0.42, 0.6, 1.4);
-    spot.position.copy(lamp.position); g.add(spot); g.add(spot.target);
-    const beamGeo = new THREE.ConeGeometry(4.6, 22, 32, 1, true); beamGeo.translate(0, -11, 0); beamGeo.rotateZ(-Math.PI / 2);
-    const beam = new THREE.Mesh(beamGeo, new THREE.ShaderMaterial({
-      uniforms: { uTime: uniforms.uTime },
-      vertexShader: "varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-      fragmentShader: /* glsl */ `uniform float uTime; varying vec3 vP;
-        void main() { float t = clamp(-vP.x / 22.0, 0.0, 1.0); float flick = 0.9 + 0.1 * sin(uTime * 3.0 + vP.x);
-          gl_FragColor = vec4(vec3(0.75, 0.9, 1.0), (1.0 - t) * (1.0 - t) * 0.16 * flick); }`,
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    }));
-    beam.position.copy(lamp.position); g.add(beam);
-    beams.push({ spot, beam, z });
-  });
-  g.userData.update = (t) => {
-    prop.rotation.x = t * 4;
-    beacon.material.color.setHex(Math.sin(t * 3) > 0.6 ? 0xff5040 : 0x401010);
-    const sweep = Math.sin(t * 0.35) * 0.35;
-    beams.forEach(({ spot, beam, z }) => {
-      const dir = new THREE.Vector3(-Math.cos(sweep), -0.45, Math.sin(sweep) + z * 0.1).normalize();
-      spot.target.position.copy(spot.position).addScaledVector(dir, 20);
-      beam.rotation.set(0, sweep, 0.42); // tilt the beam down toward the seafloor
-    });
-    g.position.y = -133 + Math.sin(t * 0.6) * 0.25;
-    g.rotation.z = Math.sin(t * 0.5) * 0.03;
-  };
-  return g;
-}
-
 export function createBackdrop(canvas, { mobile = false, reduceMotion = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: "high-performance" });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -271,6 +221,9 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   renderer.toneMappingExposure = 1.0;
   const scale = mobile ? 0.5 : 0.75;
   const scene = new THREE.Scene();
+  // a soft studio environment so metal, glass and fish scales have something to reflect
+  const envMap = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = envMap; scene.environmentIntensity = 0.35;
   const camera = new THREE.PerspectiveCamera(mobile ? 62 : 52, innerWidth / innerHeight, 0.1, 6000);
   const uniforms = { uTime: { value: 0 }, uHue: { value: 0.35 }, uSteps: { value: mobile ? 14 : 24 }, uMoon: { value: MOON } };
 
@@ -343,20 +296,22 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({ map: dot, size: 0.35, color: 0xbfd6e0, transparent: true, opacity: 0.55, depthWrite: false, fog: true }));
   scene.add(snow);
 
-  const fishGeo = (() => {
-    const body = new THREE.SphereGeometry(1, 12, 8); body.scale(0.9, 0.32, 0.14);
-    const tail = new THREE.ConeGeometry(0.28, 0.5, 4); tail.rotateZ(Math.PI / 2); tail.translate(1.05, 0, 0); tail.scale(1, 1, 0.3);
-    const merged = new THREE.BufferGeometry();
-    const pos = [], nor = [];
-    [body.toNonIndexed(), tail.toNonIndexed()].forEach((p) => { p.computeVertexNormals(); pos.push(...p.attributes.position.array); nor.push(...p.attributes.normal.array); });
-    merged.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    merged.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
-    return merged;
-  })();
-  const FISH = mobile ? 80 : 160;
-  const fish = new THREE.InstancedMesh(fishGeo, new THREE.MeshStandardMaterial({ color: 0x9fb8c8, metalness: 0.7, roughness: 0.3 }), FISH);
-  const fishData = Array.from({ length: FISH }, () => ({ r: 6 + rnd() * 10, ph: rnd() * Math.PI * 2, y: (rnd() - 0.5) * 7, sp: 0.18 + rnd() * 0.06, s: 0.35 + rnd() * 0.3 }));
-  scene.add(fish);
+  // each depth has its own life: sardines and a sea turtle in the shallows, lanternfish and jellyfish in the
+  // twilight zone, an anglerfish beside the submarine in the abyss
+  const sardines = fishSchool(uniforms, mobile ? 90 : 180, {
+    palette: { back: 0x1d3a4a, flank: 0xb4c6cf, belly: 0xeef3f4, stripe: 0x3f6a7a },
+    path: (q) => new THREE.Vector3(Math.sin(q * 0.11) * 16, -24 + Math.sin(q * 0.17) * 2.2, -34 + Math.cos(q * 0.09) * 7),
+  });
+  const lantern = fishSchool(uniforms, mobile ? 40 : 80, {
+    palette: { back: 0x0b1018, flank: 0x2a3440, belly: 0x4a5560, stripe: 0x1a2028, fin: 0x1c242c },
+    glow: 0x7fe8ff, size: [0.35, 0.55], spread: [16, 6, 10], beat: 6, metalness: 0.3,
+    path: (q) => new THREE.Vector3(-12 + Math.sin(q * 0.08) * 10, -86 + Math.sin(q * 0.13) * 3, -30 + Math.cos(q * 0.07) * 6),
+  });
+  const turtle = seaTurtle(uniforms);
+  const angler = anglerfish(uniforms); angler.position.set(9, -137.5, -16); angler.userData.baseY = -137.5; angler.userData.baseYaw = -0.7; angler.scale.setScalar(1.4);
+  scene.add(sardines, lantern, turtle, angler);
+  // a UFO with an alien pilot drifting over the starry sky at the top of the page
+  const saucer = ufo(uniforms); saucer.scale.setScalar(15); saucer.userData.setBase(new THREE.Vector3(-120, 1140, -250)); scene.add(saucer);
 
   const jellies = [
     [20, -60, -34, 2.1, 0.55, 0.0], [26, -76, -44, 1.6, 0.7, 0.3], [16, -90, -28, 1.3, 0.62, 0.55],
@@ -381,7 +336,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   glowGeo.setAttribute("position", new THREE.Float32BufferAttribute(glowPos, 3));
   const glowMat = new THREE.PointsMaterial({ map: dot, size: 0.6, color: 0x55ffcc, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const glow = new THREE.Points(glowGeo, glowMat); scene.add(glow);
-  const sub = submarine(uniforms); sub.position.set(12, -133, -30); sub.rotation.y = 0.4; sub.scale.setScalar(1.1); scene.add(sub);
+  const sub = submarine(uniforms); sub.position.set(12, -133, -30); sub.userData.baseY = -133; sub.rotation.y = 0.4; sub.scale.setScalar(0.85); scene.add(sub);
 
   const fog = new THREE.FogExp2(0x0a3a4c, 0.02);
   const fogStops = [[0, 0x0e4f63, 0.016], [1, 0x07324a, 0.02], [2, 0x041a2c, 0.026], [3, 0x02080f, 0.03]];
@@ -394,7 +349,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   }
   resize();
 
-  const tmp = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  const hueColor = new THREE.Color();
   let last = 0;
   return {
     resize,
@@ -407,8 +362,13 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       dome.position.copy(camera.position);
       const above = y > 0;
       dome.visible = water.visible = clouds.visible = above;
+      saucer.visible = y > 300;
+      if (saucer.visible) saucer.userData.update(t);
       under.visible = shafts.visible = !above;
-      snow.visible = fish.visible = !above && y > -100;
+      snow.visible = !above;
+      sardines.visible = turtle.visible = !above && y > -60;
+      lantern.visible = !above && y < -40;
+      angler.visible = !above && y < -90;
       jellies.forEach((j) => (j.visible = !above && y < -30));
       glow.visible = sub.visible = floor.visible = !above && y < -60;
       if (above) {
@@ -420,18 +380,15 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         const i = Math.min(2, Math.floor(d)), k = d - i;
         cA.setHex(fogStops[i][1]); cB.setHex(fogStops[i + 1][1]); cA.lerp(cB, k);
         fog.color.copy(cA); fog.density = fogStops[i][2] + (fogStops[i + 1][2] - fogStops[i][2]) * k;
+        fog.density *= THREE.MathUtils.smoothstep(-y, 0, 10) * 0.85 + 0.15;
         scene.fog = fog; scene.background = fog.color;
         under.material.uniforms.uCam.value.copy(camera.position);
         shafts.position.set(camera.position.x, 0, -20);
         hemi.intensity = 0.6 * (1 - d / 3) + 0.08;
         moonLight.intensity = 0.9 * (1 - d / 3);
-        fishData.forEach((f, n) => {
-          const a = f.ph + t * f.sp;
-          v.set(Math.cos(a) * f.r, -24 + f.y + Math.sin(a * 2 + n) * 0.8, -30 + Math.sin(a) * f.r * 0.6);
-          e.set(0, -a - Math.PI / 2, Math.sin(t * 6 + n) * 0.08); q.setFromEuler(e);
-          tmp.compose(v, q, sc.setScalar(f.s)); fish.setMatrixAt(n, tmp);
-        });
-        fish.instanceMatrix.needsUpdate = true;
+        if (sardines.visible) { sardines.userData.update(t); turtle.userData.update(t); }
+        if (lantern.visible) lantern.userData.update(t);
+        if (angler.visible) angler.userData.update(t, hueColor.setHSL(hue % 1, 0.8, 0.65));
         jellies.forEach((j, n) => { j.position.y = j.userData.base + Math.sin(t * 0.3 + n) * 1.5; j.rotation.y = t * 0.05 * (n % 2 ? 1 : -1); });
         glowMat.color.setHSL(hue % 1, 0.8, 0.6);
         sub.userData.update(t);
