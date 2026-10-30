@@ -402,7 +402,6 @@ main, .foot { position: relative; z-index: 1; }
 .enter-alt { display: flex; gap: 8px; justify-content: center; }
 .enter-lite { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--muted); text-decoration: none;
   border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s; }
-.enter-lite svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .enter-lite:hover { color: var(--ink); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
 .enter-lite.to-paper:hover { color: #1d1814; background: #e7e0d1; border-color: #e7e0d1; }
 .lite-switch { display: none; }
