@@ -72,7 +72,7 @@
     <a href="#work">Work</a>
     <a href="#awards">Awards</a>
     <a href="#experience">Experience</a>
-    <button type="button" class="sound-toggle" aria-pressed="false" aria-label="Sound" title="Sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/></svg><i></i><i></i><i></i></button>
+    <button type="button" class="sound-toggle" aria-pressed="false" aria-label="Sound"><i></i><i></i><i></i><i></i></button>
     <a href="cv/Arya-Bisma-Putra-Refman-CV.pdf" class="nav-cta" download>CV ↓</a>
   </nav>
 </header>
@@ -112,23 +112,22 @@
   <!-- ABOUT -->
   <section id="about" class="section about">
     <p class="ghost" data-speed="-0.22" aria-hidden="true">ABOUT</p>
-    <div class="bento">
-      <figure class="b-photo glass reveal">
-        <div class="portrait">
-          <div class="orbit-rings" data-speed="0.06" aria-hidden="true"><i></i><i></i><i></i></div>
-          <img src="img/arya-city.webp" alt="Arya standing at a glass balcony railing in the city at night, one hand on the steel handrail" data-speed="-0.05" width="1100" height="779" loading="lazy" />
-        </div>
-        <figcaption class="mono"><span class="live-dot"></span>Surabaya, Indonesia</figcaption>
-      </figure>
-      <div class="b-intro glass reveal">
-        <p class="kicker mono">01 · ABOUT ME</p>
-        <h2>I build for people who have to decide fast.</h2>
-        <p>I study <b>Information Technology at Institut Teknologi Sepuluh Nopember (ITS)</b> in Surabaya, Indonesia. Most of my work is for people under pressure: farmers watching for drought, towns in the path of volcanic ash, refinery crews near red zones, students learning algorithms, and SOC teams facing a flood of packets.</p>
-        <p>I like closing the loop: systems that <span class="t-see">see</span> what is happening, <span class="t-defend">defend</span> what matters, and help people <span class="t-decide">decide</span> what to do next.</p>
+    <div class="about-grid">
+      <div class="portrait reveal">
+        <div class="orbit-rings" data-speed="0.06" aria-hidden="true"><i></i><i></i><i></i></div>
+        <img src="img/arya-city.webp" alt="Arya standing at a glass balcony railing in the city at night, one hand on the steel handrail" data-speed="-0.05" width="1100" height="779" loading="lazy" />
       </div>
-      <div class="b-card glass reveal"><p class="b-big">3.95</p><p class="b-label mono">GPA / 4.00</p><p>Information Technology at ITS; head TA for Data Structures &amp; OOP.</p></div>
-      <div class="b-card glass reveal"><p class="b-label mono t-see">NOW</p><p>AI NLP backend at Hamilku.ID, LLM agent security and JEPA world models.</p></div>
-      <div class="b-card glass reveal"><p class="b-label mono t-decide">OPEN TO</p><p>Research collaboration, internships and hackathon teams.</p></div>
+      <div class="about-copy">
+        <p class="kicker mono reveal">01 · ABOUT ME</p>
+        <h2 class="reveal">I build for people who have to decide fast.</h2>
+        <p class="reveal">I study <b>Information Technology at Institut Teknologi Sepuluh Nopember (ITS)</b> in Surabaya, Indonesia. Most of my work is for people under pressure: farmers watching for drought, towns in the path of volcanic ash, refinery crews near red zones, students learning algorithms, and SOC teams facing a flood of packets.</p>
+        <p class="reveal">I like closing the loop: systems that <span class="t-see">see</span> what is happening, <span class="t-defend">defend</span> what matters, and help people <span class="t-decide">decide</span> what to do next.</p>
+        <dl class="facts reveal">
+          <div><dt class="mono">Study</dt><dd>Information Technology, ITS · GPA 3.95 / 4.00 · head TA for Data Structures &amp; OOP</dd></div>
+          <div><dt class="mono">Now</dt><dd>AI NLP backend at Hamilku.ID · LLM agent security · JEPA world models</dd></div>
+          <div><dt class="mono">Open to</dt><dd>Research collaboration, internships, hackathon teams</dd></div>
+        </dl>
+      </div>
     </div>
   </section>
 
@@ -143,22 +142,17 @@
 
   <!-- PILLARS -->
   <section class="section pillars" aria-label="What I work on">
-    <header class="sec-head">
-      <div><p class="kicker mono reveal">02 · WHAT I WORK ON</p><h2 class="reveal">Three things I build</h2></div>
-      <p class="lead reveal">Most of my projects sit in one of these, and the best ones touch all three.</p>
-    </header>
+    <p class="kicker mono reveal center">02 · WHAT I WORK ON</p>
     <div class="stage-wrap pillars-wrap"><canvas class="stage" data-world="pillars" aria-hidden="true"></canvas></div>
     <div class="pillar-row">
-      <article class="pillar glass reveal"><p class="mono t-see">01 / SEE</p><h3>Perception</h3><p>YOLOv8 geofencing, PPE checks, Sentinel radar and optical imagery, WebAR.</p></article>
-      <article class="pillar glass reveal"><p class="mono t-defend">02 / DEFEND</p><h3>Security</h3><p>Wazuh decoders, SOAR playbooks, digital forensics, LLM agent guardrails.</p></article>
-      <article class="pillar glass reveal"><p class="mono t-decide">03 / DECIDE</p><h3>Systems</h3><p>gRPC meshes, FastAPI services, cloud scheduling heuristics.</p></article>
+      <article class="pillar reveal"><p class="mono t-see">01 / SEE</p><h3>Perception</h3><p>YOLOv8 geofencing, PPE checks, Sentinel radar and optical imagery, WebAR.</p></article>
+      <article class="pillar reveal"><p class="mono t-defend">02 / DEFEND</p><h3>Security</h3><p>Wazuh decoders, SOAR playbooks, digital forensics, LLM agent guardrails.</p></article>
+      <article class="pillar reveal"><p class="mono t-decide">03 / DECIDE</p><h3>Systems</h3><p>gRPC meshes, FastAPI services, cloud scheduling heuristics.</p></article>
     </div>
   </section>
 
   <!-- NUMBERS -->
   <section class="section numbers" aria-label="By the numbers">
-    <div class="numbers-panel glass">
-    <p class="kicker mono center panel-title">BY THE NUMBERS</p>
     <div class="stage-wrap numbers-wrap"><canvas class="stage" data-world="metrics" aria-hidden="true"></canvas></div>
     <div class="metric-row">
       <div class="metric reveal"><p class="val t-defend" data-count="15.7" data-suffix="M" data-decimals="1">15.7M</p><p>SYN-flood packets absorbed and blocked</p><p class="src mono">SOC-SOAR</p></div>
@@ -166,7 +160,6 @@
       <div class="metric reveal"><p class="val t-see">&lt; <span data-count="50">50</span> ms</p><p>per frame to check red-zone breaches</p><p class="src mono">SIEWS+</p></div>
       <div class="metric reveal"><p class="val t-decide">~<span data-count="15">15</span>%</p><p>lower makespan than FCFS and Round Robin</p><p class="src mono">PEFT scheduler</p></div>
       <div class="metric reveal"><p class="val t-decide" data-count="2812" data-group="1">2,812</p><p>papers screened for the world-model review</p><p class="src mono">SLR</p></div>
-    </div>
     </div>
   </section>
 
@@ -284,10 +277,8 @@
 
   <!-- AWARDS -->
   <section id="awards" class="section awards">
-    <header class="sec-head">
-      <div><p class="kicker mono reveal">04 · AWARDS</p><h2 class="reveal">On the podium</h2></div>
-      <p class="lead reveal">Two silver medals and two finals, each won by showing judges something that actually runs.</p>
-    </header>
+    <p class="kicker mono reveal">04 · AWARDS</p>
+    <h2 class="reveal">On the podium</h2>
     <div class="award-grid">
       <a class="award gold reveal" href="https://semoga-kami-beruntung.vercel.app/">
         <span class="award-rank">2<sup>nd</sup></span>
@@ -318,22 +309,20 @@
         <p class="award-event mono">IMILKOM IT COMPETITION · UNIVERSITAS SUMATERA UTARA</p>
       </a>
     </div>
-    <p class="also glass reveal"><span class="mono">ALSO COMPETED</span> UM Metro Hackathon 2026 · JOINTS UGM 2026 · ForgeHacks Online 2026</p>
+    <p class="also reveal"><span class="mono">ALSO COMPETED</span> UM Metro Hackathon 2026 · JOINTS UGM 2026 · ForgeHacks Online 2026</p>
   </section>
 
   <!-- EXPERIENCE -->
   <section id="experience" class="section experience">
-    <header class="sec-head">
-      <div><p class="kicker mono reveal">05 · EXPERIENCE &amp; LEADERSHIP</p><h2 class="reveal">Where I work now</h2></div>
-      <p class="lead reveal">Industry work, campus organisations and teaching, all running in parallel.</p>
-    </header>
-    <ol class="roles">
-      <li class="role-card glass reveal"><span class="when mono">Jun 2026 – now</span><div><h3>AI NLP Backend Specialist</h3><p class="org mono">HAMILKU.ID</p><p>AI backend lead for the patient AI module: API architecture, LLM integration, and predictive models for early detection of pregnancy complications.</p></div></li>
-      <li class="role-card glass reveal"><span class="when mono">Jul 2026 – now</span><div><h3>Head of IT Dev Division</h3><p class="org mono">ARA 8.0 · ITS</p><p>Leads the developers behind registration, dashboards, the voucher system and the CTFd UI, and keeps sub-division requests on schedule.</p></div></li>
-      <li class="role-card glass reveal"><span class="when mono">Jun 2026 – now</span><div><h3>Head of Backend Sub Division</h3><p class="org mono">IBL 2K26 · ITS</p><p>RESTful API in Node.js/Express with JWT auth and real-time validation, tuned for registration traffic spikes.</p></div></li>
-      <li class="role-card glass reveal"><span class="when mono">Oct 2025 – now</span><div><h3>AI Engineer · PIC 3D Printing</h3><p class="org mono">ADMIN LAB KCKS · IT ITS</p><p>Automatic classification of thesis PDFs into AI, IoT, Cyber Security and Cloud; runs the lab's 3D printing service.</p></div></li>
-      <li class="role-card glass reveal"><span class="when mono">Nov 2025 – now</span><div><h3>IT Helpdesk Assistant</h3><p class="org mono">DIRPAIP · ITS</p><p>Technical support for ITS short courses and learning platforms.</p></div></li>
-      <li class="role-card glass reveal"><span class="when mono">Current</span><div><h3>Head Teaching Assistant</h3><p class="org mono">DEPT. OF INFORMATION TECHNOLOGY · ITS</p><p>Data Structures &amp; OOP; teaching assistant for Statistics and Calculus 1 &amp; 2.</p></div></li>
+    <p class="kicker mono reveal">05 · EXPERIENCE &amp; LEADERSHIP</p>
+    <h2 class="reveal">Where I work now</h2>
+    <ol class="timeline-x">
+      <li class="reveal"><span class="when mono">Jun 2026 – now</span><div><h3>AI NLP Backend Specialist</h3><p class="org mono">HAMILKU.ID</p><p>AI backend lead for the patient AI module: API architecture, LLM integration, and predictive models for early detection of pregnancy complications.</p></div></li>
+      <li class="reveal"><span class="when mono">Jul 2026 – now</span><div><h3>Head of IT Dev Division</h3><p class="org mono">ARA 8.0 · ITS</p><p>Leads the developers behind registration, dashboards, the voucher system and the CTFd UI, and keeps sub-division requests on schedule.</p></div></li>
+      <li class="reveal"><span class="when mono">Jun 2026 – now</span><div><h3>Head of Backend Sub Division</h3><p class="org mono">IBL 2K26 · ITS</p><p>RESTful API in Node.js/Express with JWT auth and real-time validation, tuned for registration traffic spikes.</p></div></li>
+      <li class="reveal"><span class="when mono">Oct 2025 – now</span><div><h3>AI Engineer · PIC 3D Printing</h3><p class="org mono">ADMIN LAB KCKS · IT ITS</p><p>Automatic classification of thesis PDFs into AI, IoT, Cyber Security and Cloud; runs the lab's 3D printing service.</p></div></li>
+      <li class="reveal"><span class="when mono">Nov 2025 – now</span><div><h3>IT Helpdesk Assistant</h3><p class="org mono">DIRPAIP · ITS</p><p>Technical support for ITS short courses and learning platforms.</p></div></li>
+      <li class="reveal"><span class="when mono">Current</span><div><h3>Head Teaching Assistant</h3><p class="org mono">DEPT. OF INFORMATION TECHNOLOGY · ITS</p><p>Data Structures &amp; OOP; teaching assistant for Statistics and Calculus 1 &amp; 2.</p></div></li>
     </ol>
   </section>
 
@@ -350,7 +339,7 @@
   <section id="team" class="section team">
     <p class="ghost" data-speed="-0.2" aria-hidden="true">TEAMS</p>
     <div class="two-col">
-      <div class="glass col-panel">
+      <div>
         <p class="kicker mono reveal">06 · TEAMS &amp; ORGANISATIONS</p>
         <h2 class="reveal">Built with others</h2>
         <ul class="rows">
@@ -362,7 +351,7 @@
           <li class="reveal"><a href="https://github.com/rezcape/Kriptografi_Diffie-Hellman-dan-ElGamal"><b>Diffie-Hellman &amp; ElGamal</b><span>Key exchange and public-key encryption in Python; main contributor</span><i>Crypto ↗</i></a></li>
         </ul>
       </div>
-      <div class="glass col-panel">
+      <div>
         <p class="kicker mono reveal">07 · RESEARCH &amp; MORE</p>
         <h2 class="reveal">Reading &amp; writing</h2>
         <ul class="rows">
@@ -379,7 +368,7 @@
   <!-- CONTACT -->
   <section id="contact" class="contact">
     <img class="me" src="img/arya-waterfall.webp" alt="Arya smiling in a brown t-shirt" data-speed="0.1" loading="lazy" width="760" height="1264" />
-    <div class="contact-copy glass">
+    <div class="contact-copy">
       <p class="kicker mono">08 · CONTACT</p>
       <h2>Let's build<br />something.</h2>
       <p>Open to research collaboration, internships and hackathon teams.</p>
