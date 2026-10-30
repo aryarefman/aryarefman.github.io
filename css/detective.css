@@ -68,3 +68,17 @@ html.is-glitching .contact_title-en { animation: glitch-shift .2s steps(2, end) 
   50%  { transform: translateX(6px); }
   100% { transform: none; }
 }
+
+/* dive door (dive-door.js): torn halves close, then the sheet burns onto dive mode's night */
+.dive-door { position: fixed; inset: 0; z-index: 100000; pointer-events: all; }
+.dive-door__night, .dive-door__paper { position: absolute; inset: 0; }
+.dive-door__night { opacity: 0; }
+.dive-door__paper { visibility: hidden; }
+.dive-door__half { position: absolute; top: 0; bottom: 0; width: 53%; background: #eae3d4; filter: drop-shadow(0 4px 10px rgba(40, 25, 10, .35)); }
+.dive-door__half.is-l { left: 0; animation: door-l .6s steps(6) both; }
+.dive-door__half.is-r { right: 0; background: #e2d9c6; animation: door-r .6s steps(6) both; }
+.dive-door.is-shut .dive-door__night { opacity: 1; }
+.dive-door.is-shut .dive-door__paper { visibility: visible; }
+.dive-door.is-shut .dive-door__half { display: none; }
+@keyframes door-l { from { transform: translateX(-110%) rotate(-3deg); } to { transform: none; } }
+@keyframes door-r { from { transform: translateX(110%) rotate(3deg); } to { transform: none; } }
