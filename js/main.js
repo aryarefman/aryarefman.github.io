@@ -407,6 +407,27 @@ function enter(withSound) {
   if (lenis) lenis.start();
   document.querySelector(".name").classList.add("in");
 }
+// ---------- to paper mode: torn halves close over the page, then paper.html opens from the same closed halves ----------
+function jagged(side) {   // a rough torn inner edge for one half, as a clip-path polygon in percentages
+  const pts = side === "l" ? ["0% 0%"] : ["100% 0%"];
+  for (let y = 0; y <= 100; y += 1.2 + Math.random() * 1.6) {
+    const x = 94 + Math.sin(y * 0.21) * 2.2 + Math.random() * 2.4;
+    pts.push(side === "l" ? `${x.toFixed(1)}% ${y.toFixed(1)}%` : `${(100 - x).toFixed(1)}% ${y.toFixed(1)}%`);
+  }
+  pts.push(side === "l" ? "0% 100%" : "100% 100%");
+  return `polygon(${pts.join(",")})`;
+}
+document.querySelectorAll(".to-paper").forEach((a) => a.addEventListener("click", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  try { localStorage.setItem("mode", "paper"); } catch {}
+  if (reduceMotion) { location.href = a.getAttribute("href"); return; }
+  const cover = document.createElement("div"); cover.className = "paper-cover";
+  cover.innerHTML = "<div></div><div></div>";
+  cover.children[0].style.clipPath = jagged("l"); cover.children[1].style.clipPath = jagged("r");
+  document.body.appendChild(cover);
+  sound.chime();
+  setTimeout(() => (location.href = a.getAttribute("href")), 650);
+}));
 loader.querySelector(".enter-sound").addEventListener("click", () => enter(true));
 loader.querySelector(".enter-quiet").addEventListener("click", () => enter(false));
 if (lite) enter(false);
