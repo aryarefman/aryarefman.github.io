@@ -41,15 +41,14 @@
     });
   }
 
-  // More cards float now, so the rings open up to keep them apart.
+  // More cards float now, so the home rings open up to keep them apart; the
+  // cases ring keeps the scene's own size.
   function spreadCards(character) {
     var s = character.panelSettings;
     if (!s) return;
     s.radius = 5;          // home: first ring around the character
     s.radiusGrowth = 2.8;  // home: gap between rings
     s.heightStep = 2.4;
-    s.ringRadius = 1.3;    // cases: the ring the cards gather into; the front of it passes the camera
-    s.ringPanelScale = 0.2;
     if (character.panelsGroup && character.panelTemplates) character.rebuildPanels();
   }
 
@@ -284,12 +283,37 @@
 
     // ---------- poses ----------
     // Each wide shot gets its own pose, laid over the scene's animation:
-    //   home     the ruler: floating, arms crossed over the chest
+    //   home     the ruler: floating, arms spread a little below the shoulders
     //   contact  the throne: seated, arms on the armrests
     // What can be is worked out here, while the skeleton is in bind pose.
     var Q = model.quaternion.constructor;
     var bindLocal = new Map();
     skinned.skeleton.bones.forEach(function (b) { bindLocal.set(b, b.quaternion.clone()); });
+    // the ruler: the bind pose with the upper arms dipped a little below the shoulders
+    var rulerPose = [];
+    skinned.skeleton.bones.forEach(function (b) { rulerPose.push([b, b.quaternion.clone()]); });
+    function dipArm(name, handName, angle) {
+      var upper = bone(name), hand = bone(handName);
+      if (!upper || !hand || !upper.parent) return;
+      var parentQ = upper.parent.getWorldQuaternion(new Q());
+      var worldQ = upper.getWorldQuaternion(new Q());
+      var best = null, bestY = Infinity;
+      [1, -1].forEach(function (sign) {
+        var r = new Q().setFromAxisAngle(forward, sign * angle);
+        var local = parentQ.clone().invert().multiply(r.multiply(worldQ.clone()));
+        var keep = upper.quaternion.clone();
+        upper.quaternion.copy(local);
+        upper.updateMatrixWorld(true);
+        var y = wp(hand).y;
+        if (y < bestY) { bestY = y; best = local; }
+        upper.quaternion.copy(keep);
+        upper.updateMatrixWorld(true);
+      });
+      rulerPose.forEach(function (e) { if (e[0] === upper) e[1].copy(best); });
+    }
+    dipArm('upper_arm.L', 'hand.L', 0.42);
+    dipArm('upper_arm.R', 'hand.R', 0.42);
+
     // the body's directions, kept in the chest's frame so they follow it around
     var toChest = chest.getWorldQuaternion(new Q()).invert();
     var fwdInChest = forward.clone().applyQuaternion(toChest);
@@ -487,18 +511,8 @@
       };
     }
 
-    // The ruler, floating with the arms crossed over the chest: each upper arm
-    // hangs down and a little forward, the forearm folds across to the other side.
     function poseRuler(w) {
-      var f = frame();
-      ['L', 'R'].forEach(function (k, i) {
-        var l = limbs[k], out = f.out[k], other = f.out[k === 'L' ? 'R' : 'L'];
-        // one forearm rides a little higher so the two do not pass through each other
-        var lift = i === 0 ? 0.08 : -0.02;
-        aim(l.upper, l.fore, f.up.clone().negate().addScaledVector(f.fwd, 0.55).addScaledVector(out, 0.12), w);
-        aim(l.fore, l.hand, other.clone().addScaledVector(f.fwd, 0.35).addScaledVector(f.up, 0.3 + lift), w);
-        aim(l.hand, l.finger, other.clone().addScaledVector(f.up, -0.25).addScaledVector(f.fwd, -0.2), w);
-      });
+      for (var i = 0; i < rulerPose.length; i++) rulerPose[i][0].quaternion.slerp(rulerPose[i][1], w);
     }
 
     // On the throne: upright back, knees forward, arms on the armrests.
