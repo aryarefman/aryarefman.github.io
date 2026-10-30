@@ -26,7 +26,7 @@
     }
   }, 50);
 
-  var WING_URL = '/webgl/models/wings/angel-wings.glb';
+  var WING_URL = '/webgl/models/wings/angel-wings-sxnneh.glb';
   var WING_HUMAN = 1.75; // the model is sized for a person this tall, in metres
   var WING_SIZE = 0.85;  // how big the wings hang on the character, against that person
   var WING_RAISE = 0.08; // radians the wings are lifted at rest
@@ -48,8 +48,8 @@
     s.radius = 5;          // home: first ring around the character
     s.radiusGrowth = 2.8;  // home: gap between rings
     s.heightStep = 2.4;
-    s.ringRadius = 1.75;   // cases: the ring the cards gather into
-    s.ringPanelScale = 0.17;
+    s.ringRadius = 1.3;    // cases: the ring the cards gather into; the front of it passes the camera
+    s.ringPanelScale = 0.2;
     if (character.panelsGroup && character.panelTemplates) character.rebuildPanels();
   }
 
@@ -58,7 +58,7 @@
    * carry no case, cannot be opened, and show static with an error message
    * that tears and flickers.
    */
-  var BLANKS = 12;
+  var BLANKS = 6;
   var BLANK_MARK = 'blank-case-file';
   var ERRORS = [
     ['ERROR 404', 'CASE FILE NOT FOUND'],
@@ -284,36 +284,12 @@
 
     // ---------- poses ----------
     // Each wide shot gets its own pose, laid over the scene's animation:
-    //   home     the ruler: floating, arms spread a little below the shoulders
+    //   home     the ruler: floating, arms crossed over the chest
     //   contact  the throne: seated, arms on the armrests
     // What can be is worked out here, while the skeleton is in bind pose.
     var Q = model.quaternion.constructor;
     var bindLocal = new Map();
     skinned.skeleton.bones.forEach(function (b) { bindLocal.set(b, b.quaternion.clone()); });
-    var rulerPose = [];
-    skinned.skeleton.bones.forEach(function (b) { rulerPose.push([b, b.quaternion.clone()]); });
-    function dipArm(name, handName, angle) {
-      var upper = bone(name), hand = bone(handName);
-      if (!upper || !hand || !upper.parent) return;
-      var parentQ = upper.parent.getWorldQuaternion(new Q());
-      var worldQ = upper.getWorldQuaternion(new Q());
-      var best = null, bestY = Infinity;
-      [1, -1].forEach(function (sign) {
-        var r = new Q().setFromAxisAngle(forward, sign * angle);
-        var local = parentQ.clone().invert().multiply(r.multiply(worldQ.clone()));
-        var keep = upper.quaternion.clone();
-        upper.quaternion.copy(local);
-        upper.updateMatrixWorld(true);
-        var y = wp(hand).y;
-        if (y < bestY) { bestY = y; best = local; }
-        upper.quaternion.copy(keep);
-        upper.updateMatrixWorld(true);
-      });
-      rulerPose.forEach(function (e) { if (e[0] === upper) e[1].copy(best); });
-    }
-    dipArm('upper_arm.L', 'hand.L', 0.42);
-    dipArm('upper_arm.R', 'hand.R', 0.42);
-
     // the body's directions, kept in the chest's frame so they follow it around
     var toChest = chest.getWorldQuaternion(new Q()).invert();
     var fwdInChest = forward.clone().applyQuaternion(toChest);
@@ -361,7 +337,8 @@
     function wingMaterial(src, span, bandAxis, bandDensity) {
       var d = src.clone();
       d.color.set(0xffffff);
-      if (d.emissive) { d.emissive.set(0x141418); d.emissiveMap = null; d.emissiveIntensity = 1; }
+      // a soft glow of their own, so the wings stay white even on their unlit side
+      if (d.emissive) { d.emissive.set(0x4a4a52); d.emissiveMap = d.map || null; d.emissiveIntensity = 1; }
       if ('roughness' in d) { d.roughness = 0.8; d.metalness = 0; }
       if ('sheen' in d) { d.sheen = 0; d.clearcoat = 0; }
       d.transparent = false;
@@ -455,7 +432,7 @@
 
     // ---------- motion ----------
     // On the close-up routes the camera sits right beside the character, so the
-    // wings shrink away behind the back instead of filling the frame.
+    // wings shrink away and disappear instead of filling the frame.
     var CLOSE = /^(about|contact|case-inner)$/;
     var character = exp.world.character;
     var isClose = function () { return CLOSE.test(character.currentRoute || ''); };
@@ -473,6 +450,8 @@
       var beat = Math.sin(t * 1.15) * (1 - 0.6 * fold);
       var k = 1 - 0.92 * fold;
       wingsRoot.scale.copy(baseScale).multiplyScalar(k);
+      // gone, not just small, once they have shrunk most of the way
+      wingsRoot.visible = fold < 0.6;
       for (var i = 0; i < wingPivots.length; i++) {
         var p = wingPivots[i];
         var m = p.userData.mirror;
@@ -508,8 +487,18 @@
       };
     }
 
+    // The ruler, floating with the arms crossed over the chest: each upper arm
+    // hangs down and a little forward, the forearm folds across to the other side.
     function poseRuler(w) {
-      for (var i = 0; i < rulerPose.length; i++) rulerPose[i][0].quaternion.slerp(rulerPose[i][1], w);
+      var f = frame();
+      ['L', 'R'].forEach(function (k, i) {
+        var l = limbs[k], out = f.out[k], other = f.out[k === 'L' ? 'R' : 'L'];
+        // one forearm rides a little higher so the two do not pass through each other
+        var lift = i === 0 ? 0.08 : -0.02;
+        aim(l.upper, l.fore, f.up.clone().negate().addScaledVector(f.fwd, 0.55).addScaledVector(out, 0.12), w);
+        aim(l.fore, l.hand, other.clone().addScaledVector(f.fwd, 0.35).addScaledVector(f.up, 0.3 + lift), w);
+        aim(l.hand, l.finger, other.clone().addScaledVector(f.up, -0.25).addScaledVector(f.fwd, -0.2), w);
+      });
     }
 
     // On the throne: upright back, knees forward, arms on the armrests.
@@ -591,12 +580,27 @@
     // The poses go on after the scene's own animation each frame, eased in on
     // their route and out everywhere else.
     var weights = { home: 0, contact: 0 };
+    var poseClock = performance.now();
     var rigBase = rig.position.clone();
+    var bones = skinned.skeleton.bones;
+    var clean = bones.map(function (b) { return b.quaternion.clone(); });
+    var written = bones.map(function () { return new Q(0, 0, 0, 0); });
     var update = character.update.bind(character);
     character.update = function () {
       var out = update.apply(null, arguments);
+      // Some routes stop the scene's animation, and then nothing rewrites the
+      // bones: a bone still holding last frame's pose goes back to the clean
+      // animated value it had before the poses touched it.
+      for (var i = 0; i < bones.length; i++) {
+        var b = bones[i];
+        if (b.quaternion.equals(written[i])) b.quaternion.copy(clean[i]);
+        else clean[i].copy(b.quaternion);
+      }
       var route = character.currentRoute;
-      for (var key in weights) weights[key] += ((route === key ? 1 : 0) - weights[key]) * 0.05;
+      var now = performance.now(), dt = Math.min(0.1, (now - poseClock) / 1000);
+      poseClock = now;
+      // eased by time, not frames, so slow devices change pose just as quickly
+      for (var key in weights) weights[key] += ((route === key ? 1 : 0) - weights[key]) * Math.min(1, dt * 3);
       if (route === 'contact') loadThrone();
       rig.position.copy(rigBase);
       var t = performance.now() / 1000;
@@ -604,6 +608,7 @@
       rig.updateWorldMatrix(true, true);
       if (weights.home > 0.001) poseRuler(weights.home);
       if (weights.contact > 0.001) poseThrone(weights.contact);
+      for (var j = 0; j < bones.length; j++) written[j].copy(bones[j].quaternion);
       if (throne) {
         throne.scale.setScalar(throne.userData.k * Math.max(0.0001, weights.contact));
         throne.visible = weights.contact > 0.01;
