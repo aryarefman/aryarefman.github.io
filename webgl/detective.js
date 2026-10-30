@@ -329,9 +329,11 @@
 
     // ---------- motion ----------
     // On the close-up routes the camera sits right beside the character, so the
-    // wings fold in behind the back instead of filling the frame.
-    var CLOSE = /^#\/(about|contact|case-inner)/;
-    var fold = CLOSE.test(location.hash) ? 1 : 0;
+    // wings shrink away behind the back instead of filling the frame.
+    var CLOSE = /^(about|contact|case-inner)$/;
+    var character = exp.world.character;
+    var isClose = function () { return CLOSE.test(character.currentRoute || ''); };
+    var fold = isClose() ? 1 : 0;
     var baseScale = wingsRoot.scale.clone();
     var t0 = performance.now();
     var last = t0;
@@ -340,14 +342,14 @@
       var t = (now - t0) / 1000;
       var dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      fold += ((CLOSE.test(location.hash) ? 1 : 0) - fold) * Math.min(1, dt * 2.5);
+      fold += ((isClose() ? 1 : 0) - fold) * Math.min(1, dt * 2.5);
       var beat = Math.sin(t * 1.15) * (1 - 0.6 * fold);
-      var k = 1 - 0.5 * fold;
+      var k = 1 - 0.92 * fold;
       wingsRoot.scale.copy(baseScale).multiplyScalar(k);
       for (var i = 0; i < wingPivots.length; i++) {
         var p = wingPivots[i];
         var m = p.userData.mirror;
-        p.rotation.set(0.05 * beat - 0.25 * fold, -m * (0.1 + 0.08 * beat + 0.95 * fold), m * (0.06 * beat + 0.2 * fold));
+        p.rotation.set(0.05 * beat - 0.25 * fold, -m * (0.1 + 0.08 * beat + 0.4 * fold), m * (0.06 * beat + 0.2 * fold));
       }
       requestAnimationFrame(tick);
     }
