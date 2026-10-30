@@ -117,6 +117,7 @@ function updateGauge(s) {
   gaugeValue.textContent = (m < 0 ? "−" : "") + (a >= 1000 ? `${(a / 1000).toFixed(1)} km` : `${Math.round(a)} m`);
   gaugeFill.style.clipPath = `inset(0 0 ${(100 - p).toFixed(2)}% 0)`;
   gaugeDiver.style.top = `${p.toFixed(2)}%`;
+  gauge.style.setProperty("--prog", (s / 6).toFixed(4));
   if (zone === gaugeZone) return;
   gaugeZone = zone;
   gaugeName.textContent = STAGES[zone].name;

@@ -35,45 +35,44 @@ em { font-style: normal; }
 .aura { position: fixed; inset: 0 0 auto 0; height: 55vh; z-index: -1; pointer-events: none; opacity: 0.32; mix-blend-mode: screen;
   background: radial-gradient(70% 90% at 50% -25%, var(--aura, #3fdf9f) 0%, transparent 70%); transition: background 0.4s; }
 
-/* altimeter: a glass dive gauge. Each layer has its own colour; the current one is named, the rest show on hover */
-.altimeter { --zone: #a99bff; position: fixed; right: 20px; top: 50%; transform: translateY(-50%); z-index: 25; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
-.alt-card { pointer-events: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; padding: 12px 12px 14px 14px; border-radius: 20px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.24);
-  backdrop-filter: blur(14px) saturate(1.5); -webkit-backdrop-filter: blur(14px) saturate(1.5); box-shadow: 0 12px 34px rgba(20, 6, 60, 0.35); }
-.alt-readout { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 112px; }
-.alt-value { font-size: 20px; font-weight: 600; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 0 18px var(--zone); }
-.alt-name { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
-  color: #fff; background: color-mix(in srgb, var(--zone) 32%, transparent); border: 1px solid color-mix(in srgb, var(--zone) 70%, transparent); transition: background 0.4s, border-color 0.4s; }
+/* altimeter: a slim floating dive rail. Each layer has its own colour; names appear on hover */
+.altimeter { --zone: #a99bff; --prog: 0; position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 25; display: flex; flex-direction: column; align-items: flex-end; gap: 16px; pointer-events: none; }
+.alt-card { pointer-events: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+.alt-readout { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-shadow: 0 1px 10px rgba(12, 4, 36, 0.75); }
+.alt-value { font-size: 15px; font-weight: 600; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.alt-name { display: inline-flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--zone); transition: color 0.4s; }
 .alt-name b { font-weight: 600; }
-.alt-name i { width: 6px; height: 6px; border-radius: 50%; background: var(--zone); box-shadow: 0 0 8px var(--zone); }
-.alt-rail { position: relative; height: 196px; }
-.alt-track { position: absolute; right: 5px; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); }
+.alt-name i { width: 5px; height: 5px; border-radius: 50%; background: var(--zone); box-shadow: 0 0 8px var(--zone); }
+.alt-rail { position: relative; height: 170px; }
+.alt-track { position: absolute; right: 4px; top: 4px; bottom: 4px; width: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.22); }
 .alt-fill { position: absolute; inset: 0; border-radius: inherit; clip-path: inset(0 0 100% 0);
   background: linear-gradient(#a99bff, #3fe0a0 16.6%, #ff9ccc 33.3%, #ffc163 50%, #2fdce6 66.6%, #5b8cff 83.3%, #c76bff); }
-.alt-diver { position: absolute; left: 50%; top: 0; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; background: #fff;
-  box-shadow: 0 0 0 3px var(--zone), 0 0 18px var(--zone); transition: box-shadow 0.4s; }
+.alt-diver { position: absolute; left: 50%; top: 0; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 0 2px var(--zone), 0 0 12px var(--zone); transition: box-shadow 0.4s; }
 .alt-ticks { position: relative; list-style: none; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
-.alt-ticks a { display: flex; align-items: center; justify-content: flex-end; gap: 10px; height: 12px; text-decoration: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
-.alt-ticks a span { opacity: 0; transform: translateX(6px); transition: opacity 0.25s, transform 0.25s var(--ease); white-space: nowrap; text-shadow: 0 1px 8px rgba(10, 4, 30, 0.8); }
-.alt-ticks a i { width: 9px; height: 9px; margin-right: 2px; border-radius: 50%; background: var(--c); opacity: 0.4; transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s; }
-.alt-ticks li.on a i { opacity: 1; }
-.alt-ticks li.now a span { opacity: 1; transform: none; color: var(--c); }
-.alt-ticks li.now a i { transform: scale(1.35); box-shadow: 0 0 10px var(--c); }
-.alt-card:hover .alt-ticks a span { opacity: 0.9; transform: none; }
+.alt-ticks a { display: flex; align-items: center; justify-content: flex-end; gap: 10px; height: 10px; text-decoration: none; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; }
+.alt-ticks a span { opacity: 0; transform: translateX(6px); transition: opacity 0.25s, transform 0.25s var(--ease); white-space: nowrap; text-shadow: 0 1px 10px rgba(12, 4, 36, 0.9); }
+.alt-ticks a i { width: 6px; height: 6px; margin-right: 2px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); transition: background 0.3s, transform 0.3s; }
+.alt-ticks li.on a i { background: var(--c); }
+.alt-card:hover .alt-ticks a span { opacity: 0.85; transform: none; }
 .alt-ticks a:hover span { color: var(--c); opacity: 1; }
-.alt-ticks a:hover i { opacity: 1; transform: scale(1.35); }
-/* auto-dive: a play button that scrolls the whole descent for you */
-.dive-play { pointer-events: auto; display: inline-flex; align-items: center; gap: 9px; padding: 6px 15px 6px 6px; border: 0; border-radius: 999px; cursor: pointer;
-  font: 600 12px/1 "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #1d0f3f;
-  background: linear-gradient(120deg, #ffd36e, #ff8fc4 50%, #9d8cff); background-size: 200% 100%; box-shadow: 0 8px 26px rgba(255, 120, 190, 0.35);
-  transition: transform 0.2s var(--ease), box-shadow 0.2s, background-position 0.6s; }
-.dive-play:hover { transform: translateY(-2px); background-position: 100% 0; box-shadow: 0 10px 30px rgba(255, 120, 190, 0.5); }
-.dive-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #fff; }
-.dive-icon svg { width: 14px; height: 14px; fill: #1d0f3f; grid-area: 1 / 1; }
+.alt-ticks a:hover i { transform: scale(1.5); background: var(--c); }
+/* auto-dive: a small round play button; its ring fills as the dive goes deeper */
+.dive-play { pointer-events: auto; position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.14); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: transform 0.2s var(--ease), background 0.2s; }
+.dive-play::before { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 2px;
+  background: conic-gradient(var(--zone) calc(var(--prog) * 1turn), rgba(255, 255, 255, 0.3) 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.dive-play:hover { transform: scale(1.08); background: rgba(255, 255, 255, 0.24); }
+.dive-icon { display: grid; place-items: center; }
+.dive-icon svg { width: 15px; height: 15px; fill: #fff; grid-area: 1 / 1; }
+.dive-play .i-play { margin-left: 2px; }
 .dive-play .i-pause, .dive-play[aria-pressed="true"] .i-play { display: none; }
 .dive-play[aria-pressed="true"] .i-pause { display: block; }
-.dive-play[aria-pressed="true"] .dive-icon { animation: divePulse 1.6s ease-out infinite; }
-@keyframes divePulse { from { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); } to { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } }
+.dive-label { position: absolute; right: calc(100% + 10px); top: 50%; transform: translate(6px, -50%); opacity: 0; pointer-events: none; white-space: nowrap;
+  padding: 5px 10px; border-radius: 999px; font: 600 10px/1 "JetBrains Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #fff;
+  background: rgba(30, 14, 70, 0.7); transition: opacity 0.2s, transform 0.2s var(--ease); }
+.dive-play:hover .dive-label, .dive-play:focus-visible .dive-label { opacity: 1; transform: translate(0, -50%); }
 
 /* loader: a little orrery, then an iris that opens onto the page */
 .loader { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; align-content: center; gap: 6px; overflow: hidden;
@@ -418,11 +417,9 @@ main, .foot { position: relative; z-index: 1; }
   .contact { min-height: 100svh; align-items: flex-start; }
   .altimeter { right: 10px; top: auto; bottom: 14px; transform: none; flex-direction: row; align-items: center; gap: 8px; }
   .alt-rail { display: none; }
-  .alt-card { padding: 8px 10px; border-radius: 14px; }
-  .alt-readout { min-width: 0; }
-  .alt-value { font-size: 15px; }
   .dive-label { display: none; }
-  .dive-play { padding: 6px; }
+  .alt-card { padding: 7px 11px; border-radius: 12px; background: rgba(30, 14, 70, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .dive-play { background: rgba(30, 14, 70, 0.6); }
   .contact-copy { padding: 100px var(--pad) 380px; }
   .me { left: auto; right: 2%; height: 360px; }
 }
