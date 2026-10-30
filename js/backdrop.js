@@ -299,6 +299,63 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   // a pirate galleon sailing the night sea, seen as we come down to the surface
   const ship = creature("pirate_ship", 46); ship.position.set(30, 13, -95); ship.rotation.y = -1.9; ship.userData.update = (q) => { ship.rotation.z = Math.sin(q * 0.7) * 0.03; ship.position.y = 13 + Math.sin(q * 0.9) * 0.3; }; scene.add(ship);
   const saucer = ufo(uniforms); saucer.scale.setScalar(15); saucer.userData.setBase(new THREE.Vector3(-120, 1140, -250)); scene.add(saucer);
+  // a pod of dolphins leaping out of the open sea right of the island, and a humpback whale breaching further out,
+  // each throwing up white spray as it leaves and re-enters the water
+  const leapers = [0, 1, 2].map((i) => ({ o: creature("dolphin", 8 - i * 0.6), lag: i * 0.5, dx: i * 2.2, dz: i * 3, air: false }));
+  const breacher = creature("humpback_whale", 30, { speed: 0.5 }); breacher.rotation.order = "YXZ";
+  let breacherAir = false;
+  leapers.forEach((l) => scene.add(l.o)); scene.add(breacher);
+  const LEAP = 6.5, BREACH = 19;
+  const leapAt = (q, l, out) => {                      // one 1.8 s leap every 6.5 s, a little further along each time
+    const u = ((q - l.lag) % LEAP + LEAP) % LEAP, k = Math.floor((q - l.lag) / LEAP), s = u / 1.8;
+    const x0 = 4 + ((k * 13) % 14) + l.dx;
+    out.set(x0 + Math.min(s, 1) * 17, -1.5 + 10 * 4 * s * (1 - s), -125 - l.dz);
+    return s < 1;
+  };
+  const SPLASH = mobile ? 240 : 520;
+  const spPos = new Float32Array(SPLASH * 3).fill(-999), spCol = new Float32Array(SPLASH * 3), spVel = new Float32Array(SPLASH * 3), spLife = new Float32Array(SPLASH);
+  const spGeo = new THREE.BufferGeometry();
+  spGeo.setAttribute("position", new THREE.BufferAttribute(spPos, 3)); spGeo.setAttribute("color", new THREE.BufferAttribute(spCol, 3));
+  const spray = new THREE.Points(spGeo, new THREE.PointsMaterial({ map: dot, size: 2.2, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  spray.frustumCulled = false; scene.add(spray);
+  let spNext = 0;
+  const splash = (p, n, power) => {
+    for (let j = 0; j < n; j++) {
+      const i = spNext; spNext = (spNext + 1) % SPLASH;
+      const a = rnd() * Math.PI * 2, r = rnd() * power * 0.35;
+      spPos.set([p.x + Math.cos(a) * r * 0.4, 0.2, p.z + Math.sin(a) * r * 0.4], i * 3);
+      spVel.set([Math.cos(a) * r, power * (0.5 + rnd() * 0.7), Math.sin(a) * r], i * 3);
+      spLife[i] = 0.7 + rnd() * 0.5;
+    }
+  };
+  const lHere = new THREE.Vector3(), lAhead = new THREE.Vector3();
+  function surfaceLife(t, dt, on) {
+    leapers.forEach((l) => {
+      const air = leapAt(t, l, lHere);
+      if (air !== l.air && on) splash(lHere, mobile ? 18 : 36, 6);
+      l.air = air; l.o.visible = on && air;
+      if (l.o.visible) { leapAt(t + 0.05, l, lAhead); l.o.position.copy(lHere); l.o.lookAt(lAhead); }
+    });
+    // the whale rises nose-first, twists onto its side at the top and crashes back down
+    const s = ((t % BREACH) + BREACH) % BREACH / 3.2, air = s < 1;
+    if (air) {
+      breacher.position.set(62 + s * 7, -15 + 32 * 4 * s * (1 - s), -230);
+      breacher.rotation.set(-1.25 + s * 2.1, Math.PI / 2, s * 1.6);
+    }
+    if (air !== breacherAir && on) splash(breacher.position, mobile ? 70 : 150, 16);
+    breacherAir = air; breacher.visible = on && air;
+    spray.visible = on;
+    if (!on) return;
+    for (let i = 0; i < SPLASH; i++) {
+      if (spLife[i] <= 0) continue;
+      spLife[i] -= dt; spVel[i * 3 + 1] -= 18 * dt;
+      spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt;
+      if (spPos[i * 3 + 1] < 0 || spLife[i] <= 0) { spLife[i] = 0; spPos[i * 3 + 1] = -999; }
+      const c = Math.max(0, Math.min(1, spLife[i])) * 0.9;
+      spCol.set([c * 0.85, c * 0.92, c], i * 3);
+    }
+    spGeo.attributes.position.needsUpdate = spGeo.attributes.color.needsUpdate = true;
+  }
 
   const jellies = [
     [20, -60, -34, 2.1, 0.55, 0.0], [26, -76, -44, 1.6, 0.7, 0.3], [16, -90, -28, 1.3, 0.62, 0.55],
@@ -374,6 +431,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       dome.visible = water.visible = clouds.visible = above;
       ship.visible = above && y < 260;
       if (ship.visible) { ship.userData.update(t); ship.position.x = 30 - ((t * 0.8) % 80) + 20; }
+      surfaceLife(t, dt, ship.visible);
       show(saucer, y > 300);
       if (saucer.userData.shown) saucer.userData.update(t);
       under.visible = !above;
@@ -423,7 +481,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         swimmers.forEach((sw) => { if (sw.o.visible) { sw.o.position.copy(sw.path(t)); sw.o.lookAt(sw.path(t + 0.3)); } });
         glowMat.color.setHSL(hue % 1, 0.8, 0.6);
       }
-      for (const o of [turtle, whale, octo, angler, clowns, slug, ...jellies, ...swimmers.map((sw) => sw.o)]) if (o.userData.mixer && o.visible) o.userData.mixer.update(dt);
+      for (const o of [turtle, whale, octo, angler, clowns, slug, breacher, ...leapers.map((l) => l.o), ...jellies, ...swimmers.map((sw) => sw.o)]) if (o.userData.mixer && o.visible) o.userData.mixer.update(dt);
       renderer.render(scene, camera);
     },
   };
