@@ -1,0 +1,11 @@
+Model Information:
+* title:	Parrot Fish Curacao
+* source:	https://sketchfab.com/3d-models/parrot-fish-curacao-83b8d37021574096a4a853013a70fcbf
+* author:	denvr.elias (https://sketchfab.com/denvr.elias)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Parrot Fish Curacao" (https://sketchfab.com/3d-models/parrot-fish-curacao-83b8d37021574096a4a853013a70fcbf) by denvr.elias (https://sketchfab.com/denvr.elias) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

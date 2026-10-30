@@ -17,9 +17,18 @@ export const MODELS = {
   octopus: { yaw: 0 },
   clownfish: { yaw: Math.PI },
   anglerfish: { yaw: Math.PI / 2 },
-  coral: { yaw: 0, still: true },
   seaweed: { yaw: 0, still: true, tint: 0x2f7a4a },
   pirate_ship: { yaw: Math.PI / 2, still: true, hide: /water|sea|ocean|plane/i },
+  lionfish: { yaw: 0 },
+  seahorse: { yaw: Math.PI, still: true, glow: 0.4 },
+  blue_tang: { yaw: Math.PI / 2 },
+  powder_tang: { yaw: Math.PI / 2 },
+  nudibranch: { yaw: Math.PI / 2, glow: 0.4 },
+  sea_dragon: { yaw: -Math.PI / 2, glow: 0.4 },
+  narwhal: { yaw: 0 },
+  parrotfish: { yaw: -Math.PI / 2 },
+  orca: { yaw: 0, glow: 0.15 },
+  coral: { yaw: 0, still: true, glow: 0.3 },
 };
 
 const loader = new GLTFLoader();
@@ -40,6 +49,13 @@ export function creature(name, length, { speed = 1 } = {}) {
       if (!o.isMesh) return;
       o.frustumCulled = false;
       if (cfg.tint && o.material) { o.material = o.material.clone(); o.material.color = new THREE.Color(cfg.tint); o.material.roughness = 0.7; }
+      // deep water light is dim and blue, which greys every texture: let each animal show a little of its own
+      // colour so its real markings (stripes, spots, fins) still read at depth
+      const glow = cfg.glow ?? (cfg.still ? 0 : 0.35);
+      if (glow && o.material?.map && o.material.emissive) {   // unlit (MeshBasic) materials have no emissive slot
+        o.material = o.material.clone();
+        o.material.emissiveMap = o.material.map; o.material.emissive = new THREE.Color(1, 1, 1); o.material.emissiveIntensity = glow;
+      }
     });
     const turn = new THREE.Group(); turn.add(model);
     if (cfg.yaw) turn.rotation.y = cfg.yaw;

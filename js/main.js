@@ -322,10 +322,19 @@ const loaderCount = document.querySelector(".loader-count");
 document.body.classList.add("loading");
 if (lenis) lenis.stop();
 const t0 = performance.now();
-const minShow = reduceMotion ? 0 : 900;
+const minShow = reduceMotion ? 0 : 1800;
+// the status line narrates the trip the page is about to take, from space down to the seafloor
+const loaderStep = document.querySelector(".loader-step");
+const steps = ["igniting the stars", "lighting the aurora", "charting the islands", "flooding the ocean", "waking the whale"];
+let stepShown = 0;
 (function tickLoader() {
   const k = clamp((performance.now() - t0) / Math.max(1, minShow));
-  loaderCount.textContent = String(Math.round(k * 100));
+  loaderCount.textContent = String(Math.round(k * k * (3 - 2 * k) * 100));
+  const step = Math.min(steps.length - 1, Math.floor(k * steps.length));
+  if (step !== stepShown) {
+    stepShown = step; loaderStep.classList.add("swap");
+    setTimeout(() => { loaderStep.textContent = steps[step]; loaderStep.classList.remove("swap"); }, 200);
+  }
   if (k < 1) requestAnimationFrame(tickLoader);
 })();
 Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).then(() => {

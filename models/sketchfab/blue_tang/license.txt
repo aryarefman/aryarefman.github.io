@@ -1,0 +1,11 @@
+Model Information:
+* title:	Pacific Blue Tang
+* source:	https://sketchfab.com/3d-models/pacific-blue-tang-00dac50ee5a745e9ae157df6a6a6068e
+* author:	djmacaulay (https://sketchfab.com/djmacaulay)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Pacific Blue Tang" (https://sketchfab.com/3d-models/pacific-blue-tang-00dac50ee5a745e9ae157df6a6a6068e) by djmacaulay (https://sketchfab.com/djmacaulay) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

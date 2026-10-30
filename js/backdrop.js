@@ -277,6 +277,15 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
     { o: creature("dolphin", 6.5), s: 1, ymin: -12, path: (q) => new THREE.Vector3(18 + Math.cos(q * 0.32 + 0.5) * 10, -10.5 + Math.sin(q * 0.64 + 1) * 2.5, -32 + Math.sin(q * 0.32 + 0.5) * 7) },
     { o: creature("manta_ray", 8), s: 1, ymin: -50, path: (q) => new THREE.Vector3(14 + Math.cos(q * 0.22) * 12, -40 + Math.sin(q * 0.3) * 2, -30 + Math.sin(q * 0.22) * 6) },
     { o: creature("hammerhead", 9), s: 1, ymin: -80, path: (q) => new THREE.Vector3(16 + Math.cos(-q * 0.13) * 12, -66 + Math.sin(q * 0.2) * 2, -36 + Math.sin(-q * 0.13) * 8) },
+    // colourful and unusual species, so each depth is not just grey whales and sharks
+    { o: creature("orca", 10), s: 1, ymin: -16, path: (q) => new THREE.Vector3(-8 + Math.cos(-q * 0.2) * 14, -14 + Math.sin(q * 0.4) * 2, -40 + Math.sin(-q * 0.2) * 8) },
+    { o: creature("blue_tang", 1.6), s: 1, ymin: -24, path: (q) => new THREE.Vector3(8 + Math.cos(q * 0.6) * 5, -22 + Math.sin(q * 1.1) * 1, -18 + Math.sin(q * 0.6) * 3) },
+    { o: creature("blue_tang", 1.4), s: 1, ymin: -24, path: (q) => new THREE.Vector3(8 + Math.cos(q * 0.6 + 0.4) * 5.6, -21 + Math.sin(q * 1.1 + 1) * 1, -18 + Math.sin(q * 0.6 + 0.4) * 3.4) },
+    { o: creature("powder_tang", 1.5), s: 1, ymin: -26, path: (q) => new THREE.Vector3(12 + Math.cos(-q * 0.5) * 4, -24 + Math.sin(q) * 0.8, -20 + Math.sin(-q * 0.5) * 3) },
+    { o: creature("parrotfish", 2.6), s: 1, ymin: -32, path: (q) => new THREE.Vector3(4 + Math.cos(q * 0.35) * 7, -30 + Math.sin(q * 0.7) * 1.2, -24 + Math.sin(q * 0.35) * 4) },
+    { o: creature("lionfish", 2.4), s: 1, ymin: -46, path: (q) => new THREE.Vector3(24 + Math.cos(q * 0.15) * 2, -44 + Math.sin(q * 0.5) * 0.6, -22 + Math.sin(q * 0.15) * 1.5) },
+    { o: creature("sea_dragon", 2.6), s: 1, ymin: -52, path: (q) => new THREE.Vector3(2 + Math.cos(q * 0.1) * 2, -50 + Math.sin(q * 0.4) * 0.8, -20 + Math.sin(q * 0.1) * 1.5) },
+    { o: creature("narwhal", 11), s: 1, ymin: -80, path: (q) => new THREE.Vector3(-6 + Math.cos(q * 0.1) * 14, -76 + Math.sin(q * 0.18) * 2, -46 + Math.sin(q * 0.1) * 8) },
     { o: creature("whale_shark", 16), s: 1, ymin: -110, path: (q) => new THREE.Vector3(12 + Math.cos(q * 0.07) * 16, -96 + Math.sin(q * 0.11) * 2, -50 + Math.sin(q * 0.07) * 10) },
   ];
   swimmers.forEach((sw) => { sw.o.scale.setScalar(sw.s); scene.add(sw.o); });
@@ -284,6 +293,8 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const angler = creature("anglerfish", 4); angler.position.set(-2, -136, -18); angler.rotation.y = 0.8; scene.add(angler);
   const coral = creature("coral", 14); coral.position.set(10, -141.3, -30); scene.add(coral);
   const clowns = creature("clownfish", 1.6); clowns.position.set(12, -138, -26); scene.add(clowns);
+  const seahorse = creature("seahorse", 2.2); seahorse.position.set(4, -138.6, -22); seahorse.rotation.y = 0.6; scene.add(seahorse);
+  const slug = creature("nudibranch", 1.2); slug.position.set(9, -140.9, -21); slug.rotation.y = -0.9; scene.add(slug);
   // a UFO with an alien pilot drifting over the starry sky at the top of the page
   // a pirate galleon sailing the night sea, seen as we come down to the surface
   const ship = creature("pirate_ship", 46); ship.position.set(30, 13, -95); ship.rotation.y = -1.9; ship.userData.update = (q) => { ship.rotation.z = Math.sin(q * 0.7) * 0.03; ship.position.y = 13 + Math.sin(q * 0.9) * 0.3; }; scene.add(ship);
@@ -293,6 +304,10 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
     [20, -60, -34, 2.1, 0.55, 0.0], [26, -76, -44, 1.6, 0.7, 0.3], [16, -90, -28, 1.3, 0.62, 0.55],
     [30, -100, -52, 2.4, 0.8, 0.15], [36, -84, -60, 1.6, 0.5, 0.75], [22, -114, -34, 1.1, 0.9, 0.4],
   ].map(([x, y, z, s, off, ph]) => { const j = creature("jellyfish", 6 * s, { speed: 0.8 }); j.position.set(x, y, z); j.userData.base = y; scene.add(j); return j; });
+  // the glowing jellyfish from before, drifting on the other side of the descent next to the real ones
+  [[-14, -56, -30, 2.0, 0.55, 0.0], [-22, -72, -42, 1.5, 0.7, 0.3], [-10, -88, -26, 1.2, 0.62, 0.55],
+   [-26, -104, -50, 2.2, 0.8, 0.15], [-4, -120, -36, 1.4, 0.9, 0.4], [-18, -128, -46, 1.7, 0.5, 0.75],
+  ].forEach(([x, y, z, s, off, ph]) => { const j = jellyfishV2(uniforms, off + ph); j.scale.setScalar(s); j.position.set(x, y, z); j.userData.base = y; scene.add(j); jellies.push(j); });
   // kelp swaying on the seafloor around the reef
   const kelp = [[-6, -24], [2, -36], [20, -38], [26, -22], [-12, -34]].map(([x, z], i) => { const k = creature("seaweed", 9 + (i % 3) * 2); k.position.set(x, -137.5, z); k.rotation.y = i * 1.3; scene.add(k); return k; });
 
@@ -369,7 +384,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       whale.visible = !above && y < -90;
       jellies.forEach((j) => (j.visible = !above && y < -30));
       swimmers.forEach((sw) => (sw.o.visible = !above && y > sw.ymin - 30 && y < sw.ymin + 40));
-      octo.visible = angler.visible = coral.visible = clowns.visible = !above && y < -60;
+      octo.visible = angler.visible = coral.visible = clowns.visible = seahorse.visible = slug.visible = !above && y < -60;
       kelp.forEach((k) => (k.visible = !above && y < -60));
       glow.visible = floor.visible = reef.visible = !above && y < -60;
       reef.userData.light.intensity = !above && y < -60 ? 40 : 0;   // light stays in the scene (constant light count)
@@ -402,13 +417,13 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         }
         if (lantern.visible) lantern.userData.update(t);
         if (whale.visible) { whale.position.copy(whalePath(t)); whale.lookAt(whalePath(t + 1)); }
-        clowns.position.set(12 + Math.cos(t * 0.5) * 3, -138 + Math.sin(t) * 0.4, -26 + Math.sin(t * 0.5) * 2); clowns.rotation.y = -t * 0.5;
+        clowns.position.set(12 + Math.cos(t * 0.5) * 3, -138 + Math.sin(t) * 0.4, -26 + Math.sin(t * 0.5) * 2); clowns.rotation.y = -t * 0.5; seahorse.position.y = -138.6 + Math.sin(t * 0.8) * 0.25; seahorse.rotation.z = Math.sin(t * 0.6) * 0.08;
         jellies.forEach((j, n) => { j.position.y = j.userData.base + Math.sin(t * 0.3 + n) * 1.5; j.rotation.y = t * 0.05 * (n % 2 ? 1 : -1); });
         kelp.forEach((k, n) => (k.rotation.z = Math.sin(t * 0.6 + n) * 0.06));
         swimmers.forEach((sw) => { if (sw.o.visible) { sw.o.position.copy(sw.path(t)); sw.o.lookAt(sw.path(t + 0.3)); } });
         glowMat.color.setHSL(hue % 1, 0.8, 0.6);
       }
-      for (const o of [turtle, whale, octo, angler, clowns, ...jellies, ...swimmers.map((sw) => sw.o)]) if (o.userData.mixer && o.visible) o.userData.mixer.update(dt);
+      for (const o of [turtle, whale, octo, angler, clowns, slug, ...jellies, ...swimmers.map((sw) => sw.o)]) if (o.userData.mixer && o.visible) o.userData.mixer.update(dt);
       renderer.render(scene, camera);
     },
   };

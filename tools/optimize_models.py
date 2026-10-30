@@ -5,6 +5,8 @@
 - resizes every texture (default max 1024 px; per-model overrides below) and stores opaque images as JPEG
 - deletes texture files no material uses any more
 
+- models listed in STILL lose their animations and skins' unused data, and scene.bin is repacked
+
 Usage:  python tools/optimize_models.py [model ...]     (default: every folder in models/sketchfab)
 """
 import json
@@ -17,6 +19,55 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent / "models" / "sketchfab"
 MAX = {"pirate_ship": 512, "coral": 512}
 NORMAL_MAX = 512
+STILL = {"nudibranch"}          # animation data far heavier than the model is worth
+
+
+def repack(folder: Path, g: dict):
+    """Drop animations and morph targets, then rewrite scene.bin with only the buffer views still referenced."""
+    g.pop("animations", None)
+    for mesh in g.get("meshes", []):
+        for prim in mesh["primitives"]:
+            prim.pop("targets", None)
+        mesh.pop("weights", None)
+    used = set()
+    def acc(i):
+        used.add(i)
+    for mesh in g.get("meshes", []):
+        for prim in mesh["primitives"]:
+            for a in prim["attributes"].values():
+                acc(a)
+            if "indices" in prim:
+                acc(prim["indices"])
+    for skin in g.get("skins", []):
+        if "inverseBindMatrices" in skin:
+            acc(skin["inverseBindMatrices"])
+    old = (folder / g["buffers"][0]["uri"]).read_bytes()
+    views, out, remap_view, remap_acc, accessors = g["bufferViews"], bytearray(), {}, {}, []
+    for i, a in enumerate(g["accessors"]):
+        if i not in used:
+            continue
+        v = a.get("bufferView")
+        if v is not None and v not in remap_view:
+            bv = dict(views[v]); data = old[bv.get("byteOffset", 0): bv.get("byteOffset", 0) + bv["byteLength"]]
+            while len(out) % 4:
+                out.append(0)
+            bv["byteOffset"] = len(out); bv["buffer"] = 0; out += data
+            remap_view[v] = len(remap_view); g.setdefault("_views", []).append(bv)
+        a = dict(a)
+        if v is not None:
+            a["bufferView"] = remap_view[v]
+        remap_acc[i] = len(accessors); accessors.append(a)
+    g["bufferViews"] = g.pop("_views"); g["accessors"] = accessors
+    for mesh in g.get("meshes", []):
+        for prim in mesh["primitives"]:
+            prim["attributes"] = {k: remap_acc[v] for k, v in prim["attributes"].items()}
+            if "indices" in prim:
+                prim["indices"] = remap_acc[prim["indices"]]
+    for skin in g.get("skins", []):
+        if "inverseBindMatrices" in skin:
+            skin["inverseBindMatrices"] = remap_acc[skin["inverseBindMatrices"]]
+    (folder / g["buffers"][0]["uri"]).write_bytes(out)
+    g["buffers"][0]["byteLength"] = len(out)
 
 
 def optimise(folder: Path):
@@ -42,6 +93,11 @@ def optimise(folder: Path):
             g[key] = [e for e in g[key] if e != "KHR_materials_pbrSpecularGlossiness"]
             if not g[key]:
                 g.pop(key)
+    # specular maps from KHR_materials_specular add little at this scale: keep the factors, drop the textures
+    for m in g.get("materials", []):
+        spec = m.get("extensions", {}).get("KHR_materials_specular")
+        if spec:
+            spec.pop("specularTexture", None); spec.pop("specularColorTexture", None)
     # 2. which images are still used, and how (normal maps can be smaller)
     used, normal = set(), set()
     def tex_image(ti):
@@ -56,6 +112,8 @@ def optimise(folder: Path):
                 used.add(tex_image(m[k]))
                 if k == "normalTexture":
                     normal.add(tex_image(m[k]))
+    if folder.name in STILL and g.get("animations"):
+        repack(folder, g)
     limit = MAX.get(folder.name, 1024)
     # 3. resize / re-encode used images, delete unused files
     for i, img in enumerate(g.get("images", [])):

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Seahorse
+* source:	https://sketchfab.com/3d-models/seahorse-2651aa6a55944f34abdd12f29dcf99a2
+* author:	Rigsters (https://sketchfab.com/rigsters)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Seahorse" (https://sketchfab.com/3d-models/seahorse-2651aa6a55944f34abdd12f29dcf99a2) by Rigsters (https://sketchfab.com/rigsters) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

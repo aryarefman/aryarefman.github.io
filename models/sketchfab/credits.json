@@ -89,5 +89,68 @@
     "author_url": "https://sketchfab.com/krimsun",
     "license": "CC Attribution",
     "url": "https://sketchfab.com/3d-models/the-sirens-light-pirate-ship-01d53ebc2b2148cd972c491eefa02c03"
+  },
+  "lionfish": {
+    "name": "Elegant Spiny Lionfish",
+    "author": "ofershafir",
+    "author_url": "https://sketchfab.com/ofershafir",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/elegant-spiny-lionfish-998203cf1fee4796bcc2338024bfe103"
+  },
+  "seahorse": {
+    "name": "Seahorse",
+    "author": "rigsters",
+    "author_url": "https://sketchfab.com/rigsters",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/seahorse-2651aa6a55944f34abdd12f29dcf99a2"
+  },
+  "blue_tang": {
+    "name": "Pacific Blue Tang",
+    "author": "djmacaulay",
+    "author_url": "https://sketchfab.com/djmacaulay",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/pacific-blue-tang-00dac50ee5a745e9ae157df6a6a6068e"
+  },
+  "powder_tang": {
+    "name": "Powder Blue Tang",
+    "author": "raptorhazel",
+    "author_url": "https://sketchfab.com/raptorhazel",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/powder-blue-tang-69f490fa9b4e4bf08f1132bc88b4c707"
+  },
+  "nudibranch": {
+    "name": "Sea Slug - Goniobranchus Annulatus",
+    "author": "PortMatt",
+    "author_url": "https://sketchfab.com/PortMatt",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/sea-slug-goniobranchus-annulatus-cc5ae7af3d414d20905d3a1c94eb4288"
+  },
+  "sea_dragon": {
+    "name": "Leafy Seadragon",
+    "author": "kenchoo",
+    "author_url": "https://sketchfab.com/kenchoo",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/leafy-seadragon-eebb9629b25b43d7a6afccbc8016c9fb"
+  },
+  "narwhal": {
+    "name": "Stylized Narwhal",
+    "author": "meaghansearle",
+    "author_url": "https://sketchfab.com/meaghansearle",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/stylized-narwhal-b81d90d78a5e46419dc319a9cd939d07"
+  },
+  "parrotfish": {
+    "name": "Parrot Fish Curacao",
+    "author": "denvr_3d",
+    "author_url": "https://sketchfab.com/denvr_3d",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/parrot-fish-curacao-83b8d37021574096a4a853013a70fcbf"
+  },
+  "orca": {
+    "name": "Orca Killer Whale",
+    "author": "LostPlaces",
+    "author_url": "https://sketchfab.com/LostPlaces",
+    "license": "CC Attribution",
+    "url": "https://sketchfab.com/3d-models/orca-killer-whale-7c01c438ff03401d8e77127154c041c7"
   }
 }

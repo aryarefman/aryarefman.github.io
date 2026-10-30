@@ -1,0 +1,11 @@
+Model Information:
+* title:	Elegant Spiny Lionfish
+* source:	https://sketchfab.com/3d-models/elegant-spiny-lionfish-998203cf1fee4796bcc2338024bfe103
+* author:	ofershafir (https://sketchfab.com/ofershafir)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Elegant Spiny Lionfish" (https://sketchfab.com/3d-models/elegant-spiny-lionfish-998203cf1fee4796bcc2338024bfe103) by ofershafir (https://sketchfab.com/ofershafir) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
