@@ -1,3 +1,4 @@
+import { sound } from "./sound.js";
 import * as THREE from "three";
 import { createWorld } from "./world.js";
 import { createBackdrop, metresAt, STAGES } from "./backdrop.js";
@@ -322,27 +323,40 @@ const loaderCount = document.querySelector(".loader-count");
 document.body.classList.add("loading");
 if (lenis) lenis.stop();
 const t0 = performance.now();
-const minShow = reduceMotion ? 0 : 1800;
-// the status line narrates the trip the page is about to take, from space down to the seafloor
-const loaderStep = document.querySelector(".loader-step");
-const steps = ["igniting the stars", "lighting the aurora", "charting the islands", "flooding the ocean", "waking the whale"];
-let stepShown = 0;
+const minShow = reduceMotion ? 0 : 2200;
+// the checklist narrates the trip the page is about to take, from space down to the seafloor
+const stepItems = [...document.querySelectorAll(".loader-steps li")];
 (function tickLoader() {
   const k = clamp((performance.now() - t0) / Math.max(1, minShow));
   loaderCount.textContent = String(Math.round(k * k * (3 - 2 * k) * 100));
-  const step = Math.min(steps.length - 1, Math.floor(k * steps.length));
-  if (step !== stepShown) {
-    stepShown = step; loaderStep.classList.add("swap");
-    setTimeout(() => { loaderStep.textContent = steps[step]; loaderStep.classList.remove("swap"); }, 200);
-  }
+  const now = Math.min(stepItems.length - 1, Math.floor(k * stepItems.length));
+  stepItems.forEach((li, i) => { li.classList.toggle("done", i < now || k >= 1); li.classList.toggle("now", i === now && k < 1); });
   if (k < 1) requestAnimationFrame(tickLoader);
 })();
-Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).then(() => {
-  loaderCount.textContent = "100";
+// once ready the visitor picks sound or silence (browsers only allow audio after a click); after 9 s we enter quietly
+const soundToggle = document.querySelector(".sound-toggle");
+function setSound(enabled) {
+  if (enabled) sound.enable(); else sound.disable();
+  soundToggle.setAttribute("aria-pressed", String(enabled));
+}
+soundToggle.addEventListener("click", () => { setSound(!sound.on); sound.chime(); });
+let entered = false;
+function enter(withSound) {
+  if (entered) return;
+  entered = true;
+  if (withSound) { setSound(true); sound.chime(); }
   loader.classList.add("done");
   document.body.classList.remove("loading");
   if (lenis) lenis.start();
   document.querySelector(".name").classList.add("in");
+}
+loader.querySelector(".enter-sound").addEventListener("click", () => enter(true));
+loader.querySelector(".enter-quiet").addEventListener("click", () => enter(false));
+Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).then(() => {
+  loaderCount.textContent = "100";
+  loader.classList.add("ready");
+  loader.querySelector(".enter-sound").focus({ preventScroll: true });
+  setTimeout(() => enter(false), 9000);
 });
 
 const heroStage = stages.find((s) => s.name === "hero");
@@ -368,6 +382,7 @@ function frame(time) {
   if (sky) sky.draw(time, descent, scrollY, hue, pointer.x);
   document.documentElement.style.setProperty("--aura", `hsl(${Math.round((hue % 1) * 360)} 80% 62%)`);
   updateGauge(descent);
+  sound.update(descent);
   updateCursor();
   if (archStage) { updateArchipelago(archStage); if (archStage.active) archStage.render(time); }
   for (const st of stages) if (st.visible && st !== archStage) st.render(time);

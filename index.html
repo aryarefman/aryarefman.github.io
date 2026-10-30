@@ -20,15 +20,36 @@
 </script>
 </head>
 <body>
-<div class="loader" aria-hidden="true">
-  <div class="orrery">
-    <i class="sun"></i>
-    <div class="orbit o1"><b class="pl mars"></b></div>
-    <div class="orbit o2"><b class="pl ringed"></b></div>
-    <div class="orbit o3"><b class="pl ocean"></b></div>
+<div class="loader" role="dialog" aria-label="Loading the portfolio">
+  <div class="loader-top mono"><span>arya.refman</span><span>portfolio · 2026</span></div>
+  <div class="orrery-wrap">
+    <div class="orrery" aria-hidden="true">
+      <i class="sun"></i>
+      <div class="orbit mercury"><b class="pl"></b></div>
+      <div class="orbit venus"><b class="pl"></b></div>
+      <div class="orbit earth"><b class="pl"></b></div>
+      <div class="orbit mars"><b class="pl"></b></div>
+      <div class="orbit belt"></div>
+      <div class="orbit jupiter"><b class="pl"></b></div>
+      <div class="orbit saturn"><b class="pl"></b></div>
+      <div class="orbit uranus"><b class="pl"></b></div>
+      <div class="orbit neptune"><b class="pl"></b></div>
+    </div>
   </div>
-  <p class="loader-num"><span class="loader-count">0</span><small>%</small></p>
-  <p class="loader-step mono">igniting the stars</p>
+  <div class="loader-bottom">
+    <p class="loader-num" aria-live="polite"><span class="loader-count">0</span><small>%</small></p>
+    <ol class="loader-steps mono">
+      <li>igniting the stars</li>
+      <li>lighting the aurora</li>
+      <li>charting the islands</li>
+      <li>flooding the ocean</li>
+      <li>waking the whale</li>
+    </ol>
+    <div class="loader-enter">
+      <button type="button" class="enter-sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg>Enter with sound</button>
+      <button type="button" class="enter-quiet">Enter quietly</button>
+    </div>
+  </div>
 </div>
 
 <canvas class="starfield" aria-hidden="true"></canvas>
@@ -51,6 +72,7 @@
     <a href="#work">Work</a>
     <a href="#awards">Awards</a>
     <a href="#experience">Experience</a>
+    <button type="button" class="sound-toggle" aria-pressed="false" aria-label="Sound"><i></i><i></i><i></i><i></i></button>
     <a href="cv/Arya-Bisma-Putra-Refman-CV.pdf" class="nav-cta" download>CV ↓</a>
   </nav>
 </header>
