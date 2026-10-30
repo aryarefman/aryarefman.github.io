@@ -159,8 +159,21 @@ em { font-style: normal; }
 .nav nav a { font-size: 15px; text-decoration: none; color: var(--muted); padding: 7px 13px; border-radius: 999px; transition: color 0.2s, background 0.2s; }
 .nav nav a:hover, .nav nav a.active { color: var(--ink); background: var(--line); }
 .nav nav a.nav-cta { background: var(--ink); color: var(--bg); font-weight: 600; margin-left: 6px; }
-.nav nav a.to-paper { color: #ffd9c9; border: 1px dashed rgba(255, 217, 201, 0.5); }
-.nav nav a.to-paper:hover { background: #e7e0d1; color: #1d1814; border-style: solid; }
+/* the doorway to paper mode looks like paper mode: a red brush stroke, the brush face, a stop-motion wiggle */
+@font-face { font-family: "Meat Style 1"; src: url(../fonts/Meat-Style1.woff2) format("woff2"); font-display: swap; }
+.nav nav a.to-paper, .enter-lite.to-paper {
+  font-family: "Meat Style 1", Arial, sans-serif; font-size: 20px; letter-spacing: 0.04em; line-height: 1;
+  color: #0d0d0d; background: #eb1716; border: 0; border-radius: 3px 9px 4px 11px / 9px 3px 10px 4px;
+  padding: 6px 16px 4px; transform: rotate(-2deg);
+  clip-path: polygon(1% 12%, 9% 3%, 30% 7%, 52% 1%, 74% 6%, 97% 0%, 100% 44%, 98% 92%, 78% 97%, 55% 93%, 33% 100%, 10% 95%, 0% 88%, 2% 50%);
+  transition: transform 0.35s cubic-bezier(0.35, 1.75, 0.6, 1), background 0.2s;
+}
+.nav nav a.to-paper:hover, .enter-lite.to-paper:hover {
+  color: #0d0d0d; background: #ff3b30; border: 0;
+  transform: scale(1.06) rotate(-1deg); animation: paper-wiggle 0.3s steps(2, end) infinite;
+}
+@keyframes paper-wiggle { from { rotate: 1.5deg; } to { rotate: -1.5deg; } }
+@media (prefers-reduced-motion: reduce) { .nav nav a.to-paper:hover, .enter-lite.to-paper:hover { animation: none; } }
 /* the doorway to paper mode: two torn halves snap shut in stop-motion before the page changes */
 .paper-cover { position: fixed; inset: 0; z-index: 9998; pointer-events: all; }
 .paper-cover div { position: absolute; top: 0; bottom: 0; width: 53%; background: #e7e0d1; filter: drop-shadow(0 4px 10px rgba(40, 25, 10, 0.35)); }
@@ -403,7 +416,6 @@ main, .foot { position: relative; z-index: 1; }
 .enter-lite { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--muted); text-decoration: none;
   border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s; }
 .enter-lite:hover { color: var(--ink); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
-.enter-lite.to-paper:hover { color: #1d1814; background: #e7e0d1; border-color: #e7e0d1; }
 .lite-switch { display: none; }
 html.lite .loader, html.lite .archipelago, html.lite canvas.stage, html.lite .season-band, html.lite .rail, html.lite .scene-chip,
 html.lite .dive-play, html.lite .cursor, html.lite .scroll-hint, html.lite .hero-outro, html.lite .hero-scrim, html.lite .stage-wrap { display: none !important; }

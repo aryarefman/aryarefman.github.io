@@ -125,12 +125,12 @@
   // first load, in sync with the page content landing.
   var CHROME_SELECTOR = '.navbar, .bot_info';
 
-  // Live Tokyo time in the bottom bar (.bot_info .time).
+  // Live Surabaya time (WIB) in the bottom bar (.bot_info .time).
   (function japanClock() {
     var format;
     try {
       format = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
       });
     } catch (e) { return; }
 
