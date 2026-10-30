@@ -1,4 +1,5 @@
 import { sound } from "./sound.js";
+import { startOrrery } from "./orrery.js";
 import * as THREE from "three";
 import { createWorld } from "./world.js";
 import { createBackdrop, metresAt, STAGES } from "./backdrop.js";
@@ -323,6 +324,7 @@ const loaderCount = document.querySelector(".loader-count");
 document.body.classList.add("loading");
 if (lenis) lenis.stop();
 const t0 = performance.now();
+const orrery = startOrrery(document.querySelector(".orrery-canvas"));
 const minShow = reduceMotion ? 0 : 2200;
 // the checklist narrates the trip the page is about to take, from space down to the seafloor
 const stepItems = [...document.querySelectorAll(".loader-steps li")];
@@ -346,6 +348,7 @@ function enter(withSound) {
   entered = true;
   if (withSound) { setSound(true); sound.chime(); }
   loader.classList.add("done");
+  setTimeout(() => orrery.stop(), 1300);
   document.body.classList.remove("loading");
   if (lenis) lenis.start();
   document.querySelector(".name").classList.add("in");
