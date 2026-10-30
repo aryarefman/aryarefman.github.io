@@ -3,6 +3,7 @@
 // own swim animation. Holders exist immediately; the model appears inside once it has loaded.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 
 // yaw/roll turn each model so its head points along +z (measured from a top-down render of every model)
@@ -31,10 +32,10 @@ export const MODELS = {
   coral: { yaw: 0, still: true, glow: 0.3 },
 };
 
-const loader = new GLTFLoader();
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);   // models are meshopt-compressed GLBs with WebP textures
 const sources = {};
 function source(name) {
-  return (sources[name] ??= loader.loadAsync(`models/sketchfab/${name}/scene.gltf`));
+  return (sources[name] ??= loader.loadAsync(`models/sketchfab/${name}/scene.glb`));
 }
 
 // holder: an Object3D whose +z is forward and whose longest side is `length` units

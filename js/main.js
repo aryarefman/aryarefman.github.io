@@ -11,6 +11,8 @@ const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const isMobile = () => innerWidth <= 760;
+// quick view (?lite): the same content without WebGL, the loader or the long pinned sections, for a fast read
+const lite = document.documentElement.classList.contains("lite");
 
 // inertial smooth scrolling for the whole page (native scrolling is kept with reduced motion)
 const lenis = reduceMotion ? null : new Lenis({ lerp: 0.085, smoothWheel: true, wheelMultiplier: 0.9, touchMultiplier: 1.4, anchors: true });
@@ -89,7 +91,7 @@ addEventListener("pointermove", (e) => {
 // Each section sits at its own altitude or depth; the stage `s` interpolates between their positions.
 const skyCanvas = document.querySelector(".starfield");
 let sky = null;
-try { sky = createBackdrop(skyCanvas, { mobile: isMobile(), reduceMotion }); } catch (err) { console.warn("backdrop unavailable", err); }
+if (!lite) try { sky = createBackdrop(skyCanvas, { mobile: isMobile(), reduceMotion }); } catch (err) { console.warn("backdrop unavailable", err); }
 const STAGE_ANCHORS = ["#top", "#about", ".pillars", "#work", "#awards", "#experience", "#contact"];
 let anchorY = [];
 function measureStages() {
@@ -106,37 +108,36 @@ function descentStage() {
   }
   return anchorY.length - 1;
 }
-const gauge = document.querySelector(".altimeter");
-const gaugeFill = gauge.querySelector(".alt-fill"), gaugeDiver = gauge.querySelector(".alt-diver");
-const gaugeValue = gauge.querySelector(".alt-value"), gaugeName = gauge.querySelector(".alt-name b");
-const gaugeTicks = [...gauge.querySelectorAll(".alt-ticks li")];
-const zoneColours = gaugeTicks.map((li) => li.style.getPropertyValue("--c"));
+// dive rail (right edge) and depth chip (bottom left)
+const chip = document.querySelector(".scene-chip");
+const chipIcon = chip.querySelector(".sc-ic"), gaugeValue = chip.querySelector(".alt-value"), gaugeName = chip.querySelector(".alt-name");
+const gaugeTicks = [...document.querySelectorAll(".rail a")];
+const railSegs = gaugeTicks.map((a) => a.querySelector(".rail-seg i"));
 let gaugeZone = -1;
 function updateGauge(s) {
-  const m = metresAt(s), a = Math.abs(m), zone = Math.min(6, Math.round(s)), p = (s / 6) * 100;
+  const m = metresAt(s), a = Math.abs(m), zone = Math.min(6, Math.round(s));
   gaugeValue.textContent = (m < 0 ? "−" : "") + (a >= 1000 ? `${(a / 1000).toFixed(1)} km` : `${Math.round(a)} m`);
-  gaugeFill.style.clipPath = `inset(0 0 ${(100 - p).toFixed(2)}% 0)`;
-  gaugeDiver.style.top = `${p.toFixed(2)}%`;
-  gauge.style.setProperty("--prog", (s / 6).toFixed(4));
+  railSegs.forEach((seg, i) => seg && seg.style.setProperty("--f", clamp(s - i).toFixed(3)));
   if (zone === gaugeZone) return;
   gaugeZone = zone;
   gaugeName.textContent = STAGES[zone].name;
-  gauge.style.setProperty("--zone", zoneColours[zone]);
-  gaugeTicks.forEach((li, i) => { li.classList.toggle("on", i <= zone); li.classList.toggle("now", i === zone); });
+  chip.style.setProperty("--zone", gaugeTicks[zone].style.getPropertyValue("--ic"));
+  chipIcon.innerHTML = gaugeTicks[zone].querySelector("svg").outerHTML;
+  gaugeTicks.forEach((a, i) => { a.classList.toggle("past", i < zone); a.classList.toggle("on", i === zone); });
 }
 function scrollToY(y, immediate) {
   if (lenis) lenis.scrollTo(y, { immediate });
   else scrollTo({ top: y, behavior: immediate ? "instant" : "smooth" });
 }
 // each stop on the gauge jumps to the section where the dive reaches that layer
-gaugeTicks.forEach((li, i) => li.querySelector("a").addEventListener("click", (e) => {
+gaugeTicks.forEach((a, i) => a.addEventListener("click", (e) => {
   e.preventDefault(); e.stopPropagation();
   stopAutoDive();
   scrollToY(Math.max(0, anchorY[i] + (i && i < 6 ? innerHeight * 0.5 : 0)));
 }));
 
 // ---------- auto-dive: the play button scrolls the whole descent at a steady pace ----------
-const diveBtn = gauge.querySelector(".dive-play"), diveLabel = diveBtn.querySelector(".dive-label");
+const diveBtn = document.querySelector(".dive-play"), diveLabel = diveBtn.querySelector(".dive-label");
 const DIVE_SPEED = isMobile() ? 110 : 150;   // px per second
 let diving = false, diveY = 0;
 function startAutoDive() {
@@ -243,7 +244,7 @@ const workIndex = document.querySelector(".work-index");
 const slides = [...document.querySelectorAll(".slide")];
 let travel = 0;
 function measureWork() {
-  if (innerWidth <= 860) { travel = 0; work.style.removeProperty("--travel"); return; }
+  if (lite || innerWidth <= 860) { travel = 0; work.style.removeProperty("--travel"); return; }
   travel = Math.max(0, track.scrollWidth - innerWidth);
   work.style.setProperty("--travel", `${travel}px`);
 }
@@ -351,7 +352,7 @@ function updateCursor() {
 // ---------- 3D stages ----------
 let stages = [];
 try {
-  stages = [...document.querySelectorAll("canvas.stage")].map((c) => new Stage(c));
+  if (!lite) stages = [...document.querySelectorAll("canvas.stage")].map((c) => new Stage(c));
 } catch (err) {
   console.warn("WebGL unavailable, showing the page without 3D", err);
   document.querySelectorAll("canvas.stage").forEach((c) => (c.style.display = "none"));
@@ -377,8 +378,8 @@ const loaderCount = document.querySelector(".loader-count");
 document.body.classList.add("loading");
 if (lenis) lenis.stop();
 const t0 = performance.now();
-const orrery = startOrrery(document.querySelector(".orrery-canvas"));
-const minShow = reduceMotion ? 0 : 2200;
+const orrery = lite ? { stop() {} } : startOrrery(document.querySelector(".orrery-canvas"));
+const minShow = reduceMotion || lite ? 0 : 2200;
 // the checklist narrates the trip the page is about to take, from space down to the seafloor
 const stepItems = [...document.querySelectorAll(".loader-steps li")];
 (function tickLoader() {
@@ -408,6 +409,7 @@ function enter(withSound) {
 }
 loader.querySelector(".enter-sound").addEventListener("click", () => enter(true));
 loader.querySelector(".enter-quiet").addEventListener("click", () => enter(false));
+if (lite) enter(false);
 Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).then(() => {
   loaderCount.textContent = "100";
   loader.classList.add("ready");

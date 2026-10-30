@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ufo } from "./creatures.js";
 import { creature } from "./realsea.js";
@@ -200,7 +201,7 @@ function horizonIsles() {
     const geo = new THREE.IcosahedronGeometry(30 * s, 1);
     geo.computeBoundingBox(); jitter(geo, 14 * s, false);
     geo.scale(1.3, 1.1 + rnd() * 0.7, 1);
-    const g2 = geo.toNonIndexed();
+    const g2 = geo.index ? geo.toNonIndexed() : geo;   // the icosahedron is already non-indexed
     paint(g2, (k, out) => out.copy(iceDeep).lerp(ice, Math.min(1, k * 1.6)));
     const m = new THREE.Mesh(g2, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.35, emissive: 0x4fb8d8, emissiveIntensity: 0.25 }));
     m.position.set(x, 4 * s, z); m.rotation.y = rnd() * Math.PI;
@@ -317,7 +318,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   // the stylised sardines stay as the fallback until the model has loaded
   const BARRA = mobile ? 14 : 28, barraFish = [];
   let barra = null;
-  new GLTFLoader().load("models/barramundi.glb", (gltf) => {
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("models/barramundi.glb", (gltf) => {
     let src = null; gltf.scene.traverse((o) => { if (o.isMesh && !src) src = o; });
     const geo = src.geometry.clone(); geo.translate(0, -0.14, 0);                 // centre the body on its spine
     const mat = src.material.clone();

@@ -2,6 +2,7 @@
 // target height and dropped onto the island surface with a downward raycast, so it sits on the real ground.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 const BASE = "models/polyhaven/";
 const ASSETS = {
@@ -18,9 +19,9 @@ const LAYOUT = [
 ];
 
 export async function dressIslands(isles) {
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const cache = {};
-  const load = (key) => (cache[key] ??= loader.loadAsync(`${BASE}${ASSETS[key]}/${ASSETS[key]}.gltf`).then((g) => g.scene));
+  const load = (key) => (cache[key] ??= loader.loadAsync(`${BASE}${ASSETS[key]}/${ASSETS[key]}.glb`).then((g) => g.scene));
   const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0);
   for (let i = 0; i < isles.length && i < LAYOUT.length; i++) {
     const isle = isles[i];
