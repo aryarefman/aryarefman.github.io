@@ -107,15 +107,62 @@ function descentStage() {
   return anchorY.length - 1;
 }
 const gauge = document.querySelector(".altimeter");
-const gaugeFill = gauge.querySelector(".alt-fill"), gaugeValue = gauge.querySelector(".alt-value"), gaugeName = gauge.querySelector(".alt-name");
+const gaugeFill = gauge.querySelector(".alt-fill"), gaugeDiver = gauge.querySelector(".alt-diver");
+const gaugeValue = gauge.querySelector(".alt-value"), gaugeName = gauge.querySelector(".alt-name b");
 const gaugeTicks = [...gauge.querySelectorAll(".alt-ticks li")];
+const zoneColours = gaugeTicks.map((li) => li.style.getPropertyValue("--c"));
+let gaugeZone = -1;
 function updateGauge(s) {
-  const m = metresAt(s), a = Math.abs(m);
+  const m = metresAt(s), a = Math.abs(m), zone = Math.min(6, Math.round(s)), p = (s / 6) * 100;
   gaugeValue.textContent = (m < 0 ? "−" : "") + (a >= 1000 ? `${(a / 1000).toFixed(1)} km` : `${Math.round(a)} m`);
-  gaugeName.textContent = STAGES[Math.min(6, Math.round(s))].name;
-  gaugeFill.style.transform = `scaleY(${(s / 6).toFixed(4)})`;
-  gaugeTicks.forEach((li, i) => li.classList.toggle("on", s >= i - 0.5));
+  gaugeFill.style.clipPath = `inset(0 0 ${(100 - p).toFixed(2)}% 0)`;
+  gaugeDiver.style.top = `${p.toFixed(2)}%`;
+  if (zone === gaugeZone) return;
+  gaugeZone = zone;
+  gaugeName.textContent = STAGES[zone].name;
+  gauge.style.setProperty("--zone", zoneColours[zone]);
+  gaugeTicks.forEach((li, i) => { li.classList.toggle("on", i <= zone); li.classList.toggle("now", i === zone); });
 }
+function scrollToY(y, immediate) {
+  if (lenis) lenis.scrollTo(y, { immediate });
+  else scrollTo({ top: y, behavior: immediate ? "instant" : "smooth" });
+}
+// each stop on the gauge jumps to the section where the dive reaches that layer
+gaugeTicks.forEach((li, i) => li.querySelector("a").addEventListener("click", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  stopAutoDive();
+  scrollToY(Math.max(0, anchorY[i] + (i && i < 6 ? innerHeight * 0.5 : 0)));
+}));
+
+// ---------- auto-dive: the play button scrolls the whole descent at a steady pace ----------
+const diveBtn = gauge.querySelector(".dive-play"), diveLabel = diveBtn.querySelector(".dive-label");
+const DIVE_SPEED = isMobile() ? 110 : 150;   // px per second
+let diving = false, diveY = 0;
+function startAutoDive() {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  diveY = scrollY >= max - 4 ? 0 : scrollY;   // already at the bottom: start again from the stars
+  if (diveY === 0) scrollToY(0, true);
+  diving = true;
+  diveBtn.setAttribute("aria-pressed", "true"); diveLabel.textContent = "Pause";
+}
+function stopAutoDive() {
+  if (!diving) return;
+  diving = false;
+  diveBtn.setAttribute("aria-pressed", "false"); diveLabel.textContent = "Auto-dive";
+}
+function stepAutoDive(dt) {
+  if (!diving) return;
+  const max = document.documentElement.scrollHeight - innerHeight;
+  diveY = Math.min(max, diveY + DIVE_SPEED * dt);
+  scrollToY(diveY, true);
+  if (diveY >= max) stopAutoDive();
+}
+diveBtn.addEventListener("click", () => { if (diving) stopAutoDive(); else startAutoDive(); sound.chime(); });
+// any manual scrolling hands control back to the visitor
+const takeOver = (e) => { if (!diveBtn.contains(e.target)) stopAutoDive(); };
+addEventListener("wheel", takeOver, { passive: true });
+addEventListener("touchstart", takeOver, { passive: true });
+addEventListener("keydown", (e) => { if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(e.key) && !diveBtn.contains(e.target)) stopAutoDive(); });
 
 // ---------- hero: scroll flies the camera around the island ----------
 const hero = document.querySelector(".hero");
@@ -205,6 +252,11 @@ function updateWork() {
   track.style.transform = `translate3d(${(-p * travel).toFixed(1)}px, 0, 0)`;
   workBar.style.transform = `scaleX(${p})`;
   workIndex.textContent = String(Math.min(slides.length, Math.round(p * (slides.length - 1)) + 1)).padStart(2, "0");
+  // cover-flow: each card swings and dims by its distance from the middle of the screen
+  for (const s of slides) {
+    const r = s.getBoundingClientRect(), d = clamp(((r.left + r.width / 2) / innerWidth - 0.5) * 1.6, -1, 1);
+    s.style.setProperty("--d", d.toFixed(3)); s.style.setProperty("--ad", Math.abs(d).toFixed(3));
+  }
 }
 
 // ---------- parallax layers, progress bar, active nav ----------
@@ -370,6 +422,7 @@ let descentSmooth = 0, lastTime = 0;
 function frame(time) {
   if (lenis) lenis.raf(time);
   const dt = Math.min(0.1, Math.max(0, (time - lastTime) / 1000)); lastTime = time;
+  stepAutoDive(dt);
   if (heroStage && heroStage.visible) updateHero(heroStage, reduceMotion ? 0 : sectionProgress(hero));
   if (!reduceMotion) { updateLayers(); updateWork(); }
   else if (travel) updateWork();

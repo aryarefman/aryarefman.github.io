@@ -86,7 +86,10 @@ function skyDome(uniforms) {
       void main() {
         vec3 rd = normalize(vDir);
         float h = max(rd.y, 0.0);
-        vec3 col = mix(vec3(0.07, 0.045, 0.16), vec3(0.012, 0.01, 0.045), pow(h, 0.45)) + vec3(0.13, 0.05, 0.17) * exp(-h * 8.0);
+        // twilight gradient: a warm peach horizon, through magenta, up to a deep violet-blue zenith where the stars show
+        vec3 col = mix(vec3(1.0, 0.5, 0.42), vec3(0.62, 0.2, 0.62), smoothstep(0.0, 0.16, h));
+        col = mix(col, vec3(0.2, 0.12, 0.48), smoothstep(0.1, 0.5, h));
+        col = mix(col, vec3(0.06, 0.06, 0.24), smoothstep(0.45, 1.0, h));
         vec2 sp = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1.0, 1.0))) * 160.0;
         vec2 cell = floor(sp), f = fract(sp) - 0.5;
         float r = hash(cell);
@@ -101,8 +104,8 @@ function skyDome(uniforms) {
         float m = dot(rd, uMoon);
         col += vec3(3.2, 3.05, 2.7) * smoothstep(0.99986, 0.99991, m) * (0.82 + 0.18 * fbm(rd.xy * 900.0));
         col += vec3(0.16, 0.17, 0.24) * pow(max(m, 0.0), 2200.0) + vec3(0.035, 0.04, 0.065) * pow(max(m, 0.0), 40.0);
-        col += aurora(rd);
-        col = col / (1.0 + col * 0.6);
+        col += aurora(rd) * 1.35;
+        col = col / (1.0 + col * 0.5);
         gl_FragColor = vec4(col, 1.0);
       }`,
     side: THREE.BackSide, depthWrite: false, toneMapped: false,
@@ -145,11 +148,74 @@ function softDot() {
   return new THREE.CanvasTexture(c);
 }
 
+// low-poly islands and icebergs scattered along the horizon so the open sea is not empty;
+// the Water mirror reflects them for free
+function horizonIsles() {
+  let seed = 91; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, emissive: 0x2a1a40, emissiveIntensity: 0.35 });
+  const sand = new THREE.Color(0xf6d39a), grass = new THREE.Color(0x3fcf78), jungle = new THREE.Color(0x1f9a68), rock = new THREE.Color(0x9a86b8), snow = new THREE.Color(0xffffff);
+  const ice = new THREE.Color(0xe6fbff), iceDeep = new THREE.Color(0x7fd8f0), c = new THREE.Color();
+  function paint(geo, pick) {
+    const pos = geo.attributes.position, col = [];
+    geo.computeBoundingBox();
+    const { min, max } = geo.boundingBox;
+    for (let i = 0; i < pos.count; i++) { pick((pos.getY(i) - min.y) / (max.y - min.y || 1), c); col.push(c.r, c.g, c.b); }
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  }
+  // offsets come from a hash of the vertex position, so duplicated seam vertices move together and the mesh stays closed
+  const salt = rnd() * 100;
+  const hash = (x, y, z, k) => { const v = Math.sin(x * 12.99 + y * 78.23 + z * 37.72 + k * 4.1 + salt) * 43758.55; return v - Math.floor(v) - 0.5; };
+  function jitter(geo, amt, keepBase) {
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (keepBase && y <= geo.boundingBox.min.y + 0.01) continue;
+      const qx = Math.round(x * 100) / 100, qy = Math.round(y * 100) / 100, qz = Math.round(z * 100) / 100;
+      pos.setXYZ(i, x + hash(qx, qy, qz, 1) * amt, y + hash(qx, qy, qz, 2) * amt * 0.6, z + hash(qx, qy, qz, 3) * amt);
+    }
+  }
+  function island(x, z, s) {
+    const g = new THREE.Group();
+    const beach = new THREE.Mesh(new THREE.CylinderGeometry(95 * s, 110 * s, 6, 14).toNonIndexed(), mat);
+    paint(beach.geometry, (_, out) => out.copy(sand)); beach.position.y = 1;
+    g.add(beach);
+    const peaks = 1 + Math.floor(rnd() * 3);
+    for (let p = 0; p < peaks; p++) {
+      const h = (38 + rnd() * 52) * s * (p ? 0.6 : 1), r = (70 + rnd() * 30) * s * (p ? 0.7 : 1);
+      // a squashed, lumpy dome reads as a hill rather than a spike
+      const geo = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+      geo.scale(r, h, r * (0.75 + rnd() * 0.3));
+      geo.computeBoundingBox(); jitter(geo, 14 * s, true);
+      const g2 = geo.toNonIndexed();
+      paint(g2, (k, out) => (k < 0.15 ? out.copy(grass) : k < 0.7 ? out.copy(jungle).lerp(grass, 0.35 - k * 0.3) : k < 0.9 || h < 60 * s ? out.copy(rock).lerp(jungle, 0.3) : out.copy(snow)));
+      const m = new THREE.Mesh(g2, mat);
+      m.position.set(p ? (rnd() - 0.5) * 100 * s : 0, 2, p ? (rnd() - 0.5) * 40 * s : 0);
+      g.add(m);
+    }
+    g.position.set(x, -1, z); g.rotation.y = rnd() * Math.PI;
+    return g;
+  }
+  function iceberg(x, z, s) {
+    const geo = new THREE.IcosahedronGeometry(30 * s, 1);
+    geo.computeBoundingBox(); jitter(geo, 14 * s, false);
+    geo.scale(1.3, 1.1 + rnd() * 0.7, 1);
+    const g2 = geo.toNonIndexed();
+    paint(g2, (k, out) => out.copy(iceDeep).lerp(ice, Math.min(1, k * 1.6)));
+    const m = new THREE.Mesh(g2, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.35, emissive: 0x4fb8d8, emissiveIntensity: 0.25 }));
+    m.position.set(x, 4 * s, z); m.rotation.y = rnd() * Math.PI;
+    return m;
+  }
+  [[-280, -520, 1.0], [200, -720, 1.4], [560, -480, 0.8], [-660, -780, 1.6], [20, -980, 1.2], [-900, -560, 0.9]].forEach(([x, z, s]) => group.add(island(x, z, s)));
+  [[-130, -330, 0.7], [330, -380, 0.9], [-440, -420, 1.1], [740, -660, 1.3], [-60, -620, 0.8]].forEach(([x, z, s]) => group.add(iceberg(x, z, s)));
+  return group;
+}
+
 export function createBackdrop(canvas, { mobile = false, reduceMotion = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: "high-performance" });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.15;
   const scale = mobile ? 0.5 : 0.65;
   const scene = new THREE.Scene();
   // a soft studio environment so metal, glass and fish scales have something to reflect
@@ -163,7 +229,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const normals = new THREE.TextureLoader().load("img/textures/waternormals.jpg", (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
   const water = new Water(new THREE.PlaneGeometry(10000, 10000), {
     textureWidth: mobile ? 256 : 512, textureHeight: mobile ? 256 : 512, waterNormals: normals,
-    sunDirection: MOON.clone(), sunColor: 0xcfd9ff, waterColor: 0x063350, distortionScale: 3.2, fog: false,
+    sunDirection: MOON.clone(), sunColor: 0xffd8c8, waterColor: 0x0b7290, distortionScale: 3.2, fog: false,
   });
   water.rotation.x = -Math.PI / 2; scene.add(water);
   const under = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.ShaderMaterial({
@@ -178,7 +244,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         float rip = fbm3(vW.xz * 0.08 + uTime * 0.12);
         float caus = pow(1.0 - abs(sin(fbm3(vW.xz * 0.25 + uTime * 0.3) * 10.0)), 8.0);
         vec3 bright = mix(vec3(0.35, 0.55, 0.7), hsv(fract(uHue), 0.4, 0.9), 0.25) * (0.6 + rip * 0.6 + caus * 0.5);
-        vec3 dark = vec3(0.01, 0.06, 0.09) * (0.8 + rip * 0.4);
+        vec3 dark = vec3(0.03, 0.2, 0.26) * (0.8 + rip * 0.4);
         float dist = length(vW - uCam);
         vec3 col = mix(dark, bright, window);
         // same order as three.js materials: tone map and encode first, then fog, so it matches the background exactly
@@ -193,14 +259,15 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
 
   // lights
   const moonLight = new THREE.DirectionalLight(0xbfcaff, 0.9); moonLight.position.copy(MOON).multiplyScalar(100); scene.add(moonLight);
-  const hemi = new THREE.HemisphereLight(0x4a6a9a, 0x05080f, 0.6); scene.add(hemi);
+  const hemi = new THREE.HemisphereLight(0x8aa0e0, 0x2a3050, 0.6); scene.add(hemi);
+  const isles = horizonIsles(); scene.add(isles);
 
   // cloud deck between 140 and 280 units up: we fall through it
   const cloudTex = [11, 23, 37].map(cloudTexture);
   const clouds = new THREE.Group(); scene.add(clouds);
   let seed = 5; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   for (let i = 0; i < 70; i++) {
-    const m = new THREE.SpriteMaterial({ map: cloudTex[i % 3], color: [0xb8a8e0, 0xe4b4d6, 0x9ac8e8, 0xc8c0f0][i % 4], transparent: true, depthWrite: false, opacity: 0.85, fog: false });
+    const m = new THREE.SpriteMaterial({ map: cloudTex[i % 3], color: [0xd6b8f0, 0xffc0d8, 0xa8dcf8, 0xffd2b0][i % 4], transparent: true, depthWrite: false, opacity: 0.85, fog: false });
     const sp = new THREE.Sprite(m);
     const w = 120 + rnd() * 260; sp.scale.set(w, w * 0.55, 1);
     sp.position.set((rnd() - 0.5) * 900, 140 + rnd() * 140, -60 - rnd() * 700);
@@ -391,7 +458,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
 
   // fog stays attached for the whole page (density 0 above water): toggling it would recompile every material
   const fog = new THREE.FogExp2(0x0a3a4c, 0.0); scene.fog = fog;
-  const fogStops = [[0, 0x1b8a9c, 0.014], [1, 0x14609e, 0.018], [2, 0x22308a, 0.022], [3, 0x2a1660, 0.026]];
+  const fogStops = [[0, 0x2cc8d4, 0.012], [1, 0x2390d8, 0.015], [2, 0x4458d0, 0.018], [3, 0x6a34b0, 0.021]];
   const cA = new THREE.Color(), cB = new THREE.Color();
 
   function resize() {
@@ -430,6 +497,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       const above = y > 0;
       dome.visible = water.visible = clouds.visible = above;
       ship.visible = above && y < 260;
+      isles.visible = above && y < 320;
       if (ship.visible) { ship.userData.update(t); ship.position.x = 30 - ((t * 0.8) % 80) + 20; }
       surfaceLife(t, dt, ship.visible);
       show(saucer, y > 300);
@@ -460,8 +528,8 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         under.material.uniforms.uCam.value.copy(camera.position);
         under.material.uniforms.uFog.value.copy(fog.color).convertLinearToSRGB();   // three.js passes fog and clear colours in output space
         shafts.position.set(camera.position.x, 0, -20);
-        hemi.intensity = 0.6 * (1 - d / 3) + 0.08;
-        moonLight.intensity = 0.9 * (1 - d / 3);
+        hemi.intensity = 0.6 * (1 - d / 3) + 0.25;
+        moonLight.intensity = 0.9 * (1 - d / 3) + 0.15;
         if (barra) {
           barra.visible = y > -60;
           if (barra.visible) {

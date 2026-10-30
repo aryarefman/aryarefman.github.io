@@ -9,7 +9,7 @@
 <meta property="og:description" content="Systems that see, defend and decide. Awards, projects, hackathons and research." />
 <meta property="og:image" content="https://aryarefman.github.io/img/og.png" />
 <meta property="og:type" content="website" />
-<meta name="theme-color" content="#05050f" />
+<meta name="theme-color" content="#1b1145" />
 <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="img/favicon.png" type="image/png" sizes="64x64" />
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
@@ -48,12 +48,26 @@
 <canvas class="stage archipelago" data-world="archipelago" aria-hidden="true"></canvas>
 <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
 <div class="progress" aria-hidden="true"><span></span></div>
-<aside class="altimeter mono" aria-hidden="true">
-  <div class="alt-readout"><span class="alt-value">8.0 km</span><span class="alt-name">Starry sky</span></div>
-  <div class="alt-track"><span class="alt-fill"></span></div>
-  <ol class="alt-ticks">
-    <li>Starry sky</li><li>Aurora</li><li>Clouds</li><li>Sea surface</li><li>Shallow sea</li><li>Twilight zone</li><li>Abyss</li>
-  </ol>
+<aside class="altimeter mono" aria-label="Dive gauge">
+  <button type="button" class="dive-play" aria-pressed="false" aria-label="Auto-dive: scroll the page for me">
+    <span class="dive-icon" aria-hidden="true"><svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></span>
+    <span class="dive-label">Auto-dive</span>
+  </button>
+  <div class="alt-card">
+    <div class="alt-readout" aria-hidden="true"><span class="alt-value">8.0 km</span><span class="alt-name"><i></i><b>Starry sky</b></span></div>
+    <div class="alt-rail">
+      <div class="alt-track" aria-hidden="true"><span class="alt-fill"></span><span class="alt-diver"></span></div>
+      <ol class="alt-ticks">
+        <li style="--c:#a99bff"><a href="#top"><span>Starry sky</span><i></i></a></li>
+        <li style="--c:#3fe0a0"><a href="#about"><span>Aurora</span><i></i></a></li>
+        <li style="--c:#ff9ccc"><a href="#pillars"><span>Clouds</span><i></i></a></li>
+        <li style="--c:#ffc163"><a href="#work"><span>Sea surface</span><i></i></a></li>
+        <li style="--c:#2fdce6"><a href="#awards"><span>Shallow sea</span><i></i></a></li>
+        <li style="--c:#5b8cff"><a href="#experience"><span>Twilight zone</span><i></i></a></li>
+        <li style="--c:#c76bff"><a href="#contact"><span>Abyss</span><i></i></a></li>
+      </ol>
+    </div>
+  </div>
 </aside>
 
 <header class="nav">
@@ -132,7 +146,7 @@
   </section>
 
   <!-- PILLARS -->
-  <section class="section pillars" aria-label="What I work on">
+  <section id="pillars" class="section pillars" aria-label="What I work on">
     <p class="kicker mono reveal center">02 · WHAT I WORK ON</p>
     <div class="stage-wrap pillars-wrap"><canvas class="stage" data-world="pillars" aria-hidden="true"></canvas></div>
     <div class="pillar-row">
