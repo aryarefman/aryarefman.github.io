@@ -259,9 +259,9 @@
   var routeMap = {
     home: 'home',
     index: 'home',
+    'paper.html': 'home',
+    paper: 'home',
     cases: 'cases',
-    'paper.html': 'cases',
-    paper: 'cases',
     case: 'cases',
     about: 'about',
     contact: 'contact',
@@ -354,10 +354,11 @@
 
   function routeFromPath(path) {
     var p = String(path || '/').replace(/\/+$/, '') || '/';
-    if (p === '/') return 'home';
+    if (p === '/' || p === '/paper.html' || p === '/paper') return 'home';
     var segs = p.split('/').filter(Boolean);
     var first = (segs[0] || '').toLowerCase();
-    if (first === 'cases' || first === 'case' || first === 'paper.html' || first === 'paper') return segs.length > 1 ? 'case-inner' : 'cases';
+    if (first === 'paper.html' || first === 'paper') return 'home';
+    if (first === 'cases' || first === 'case') return segs.length > 1 ? 'case-inner' : 'cases';
     if (first === 'about') return 'about';
     if (first === 'contact') return 'contact';
     return routeMap[first] || 'home';
