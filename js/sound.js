@@ -3,11 +3,12 @@
 //   space  — a warm, slowly breathing major-9 pad            (s 0–2)
 //   wind   — filtered noise gusting through the clouds       (s 1–3)
 //   surf   — waves rolling in and out at the surface         (s 2.5–4)
-//   deep   — a soft underwater wash and a dreamy major pad   (s 3.5–6), with bubbles and distant whale calls
+//   deep   — a soft underwater wash and a dreamy major pad   (s 3.5–6), with bubbles
+//   calls  — songbirds by the islands (s 1.3–3.3), gulls over the sea surface (s 2.1–3.5), humpback song below (s > 3.4)
 //   bells  — music-box notes from a pentatonic scale sprinkled over the whole dive
 // Browsers only allow audio after a click, so nothing starts until enable() is called from one.
 
-let ctx = null, master = null, layers = null, on = false, depth = 0, nextCall = 0, nextBubble = 0, nextBell = 0;
+let ctx = null, master = null, layers = null, on = false, depth = 0, nextCall = 0, nextBubble = 0, nextBell = 0, nextGull = 0, nextChirp = 0;
 
 const band = (s, a, b, c, d) => (s <= a || s >= d ? 0 : s < b ? (s - a) / (b - a) : s <= c ? 1 : (d - s) / (d - c));
 
@@ -79,17 +80,68 @@ function build() {
   layers = { space, wind, surf, deep, drone, hall };
 }
 
-// a humpback-like moan: a sine gliding down and back up, heard through the hall
-function whaleCall(level) {
-  const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-  f.type = "lowpass"; f.frequency.value = 900;
-  const base = 220 + Math.random() * 110;
-  o.frequency.setValueAtTime(base, t);
-  o.frequency.exponentialRampToValueAtTime(base * 0.62, t + 1.4);
-  o.frequency.exponentialRampToValueAtTime(base * 1.35, t + 3.2);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.16 * level, t + 0.6); g.gain.linearRampToValueAtTime(0, t + 3.4);
-  o.connect(f).connect(g); g.connect(layers.hall); g.connect(master);
-  o.start(t); o.stop(t + 3.6);
+// a voice placed somewhere left or right, so calls come from around the listener
+function placed(gain, pan, wet = true) {
+  const p = ctx.createStereoPanner(); p.pan.value = pan;
+  gain.connect(p).connect(master); if (wet) p.connect(layers.hall);
+  return p;
+}
+// one note of humpback song: a tone with a second harmonic, a slow vibrato and a pitch contour.
+// Humpbacks sing in phrases of moans, upsweeping "whoops" and high cries, so a call strings two or three together.
+function whaleNote(t, contour, dur, level, pan) {
+  const g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 1500; f.Q.value = 0.7;
+  const vib = ctx.createOscillator(), vibAmt = ctx.createGain(); vib.frequency.value = 4.5 + Math.random() * 2; vibAmt.gain.value = contour[0] * 0.018;
+  vib.connect(vibAmt);
+  [[1, "sine", 1], [2.005, "triangle", 0.28], [3.01, "sine", 0.08]].forEach(([mul, type, amp]) => {
+    const o = ctx.createOscillator(), og = ctx.createGain(); o.type = type; og.gain.value = amp;
+    o.frequency.setValueAtTime(contour[0] * mul, t);
+    contour.slice(1).forEach((fq, i) => o.frequency.exponentialRampToValueAtTime(fq * mul, t + dur * (i + 1) / (contour.length - 1)));
+    vibAmt.connect(o.frequency);
+    o.connect(og).connect(f); o.start(t); o.stop(t + dur + 0.1);
+  });
+  vib.start(t); vib.stop(t + dur + 0.1);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.14 * level, t + dur * 0.25);
+  g.gain.setValueAtTime(0.14 * level, t + dur * 0.7); g.gain.linearRampToValueAtTime(0, t + dur);
+  f.connect(g); placed(g, pan);
+}
+function whaleSong(level) {
+  const t0 = ctx.currentTime, pan = Math.random() * 1.4 - 0.7, r = (a, b) => a + Math.random() * (b - a);
+  const phrases = [
+    () => [[r(200, 260), r(130, 160), r(190, 240)], r(2.6, 3.4)],    // moan: down and back up
+    () => [[r(110, 140), r(380, 480)], r(0.9, 1.3)],                 // whoop: a fast upsweep
+    () => [[r(620, 780), r(820, 950), r(480, 560)], r(1.4, 2)],      // cry: high, rising then falling
+    () => [[r(90, 110), r(70, 85)], r(1.8, 2.4)],                    // grunt: a low, short groan
+  ];
+  let t = t0;
+  for (let i = 0, n = 2 + Math.floor(Math.random() * 2); i < n; i++) {
+    const [contour, dur] = phrases[Math.floor(Math.random() * phrases.length)]();
+    whaleNote(t, contour, dur, level, pan); t += dur + r(0.3, 0.9);
+  }
+}
+// a herring gull's "kee-ow": a raspy, falling cry repeated a few times, from somewhere along the shore
+function gull(level) {
+  const t0 = ctx.currentTime, pan = Math.random() * 1.6 - 0.8, n = 2 + Math.floor(Math.random() * 3), pitch = 0.85 + Math.random() * 0.35;
+  const out = ctx.createGain(); out.gain.value = level; placed(out, pan);
+  for (let i = 0; i < n; i++) {
+    const t = t0 + i * (0.3 + Math.random() * 0.08), dur = i === 0 ? 0.42 : 0.26;
+    const o = ctx.createOscillator(), rasp = ctx.createOscillator(), raspAmt = ctx.createGain(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = "sawtooth"; bp.type = "bandpass"; bp.frequency.value = 2100 * pitch; bp.Q.value = 1.6;
+    rasp.frequency.value = 38; raspAmt.gain.value = 70; rasp.connect(raspAmt).connect(o.frequency);   // the throaty buzz
+    o.frequency.setValueAtTime(1350 * pitch, t); o.frequency.linearRampToValueAtTime(1750 * pitch, t + dur * 0.25); o.frequency.exponentialRampToValueAtTime(900 * pitch, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(bp).connect(g).connect(out); o.start(t); o.stop(t + dur + 0.05); rasp.start(t); rasp.stop(t + dur + 0.05);
+  }
+}
+// a small songbird: a quick run of bright chirps, each a fast upward flick
+function chirps(level) {
+  const t0 = ctx.currentTime, pan = Math.random() * 1.6 - 0.8, n = 3 + Math.floor(Math.random() * 5), base = 2600 + Math.random() * 1400;
+  const out = ctx.createGain(); out.gain.value = level; placed(out, pan);
+  for (let i = 0; i < n; i++) {
+    const t = t0 + i * (0.07 + Math.random() * 0.06), f = base * (1 + (Math.random() - 0.5) * 0.25), o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.55, t + 0.05);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.08);
+  }
 }
 // a music-box note from the C major pentatonic scale: sparkles in the sky, softer and an octave lower under water
 const BELLS = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
@@ -136,7 +188,12 @@ export const sound = {
     layers.drone.gain.setTargetAtTime(band(s, 3.6, 4.8, 6, 7), t, k);
     const now = performance.now();
     if (now > nextBell) { if (nextBell) bell(s < 3 ? 1 : 0.7, s < 3 ? 1 : 0.5); nextBell = now + 900 + Math.random() * 2400; }
-    if (s > 4.6 && now > nextCall) { if (nextCall) whaleCall(Math.min(1, s - 4.6)); nextCall = now + 9000 + Math.random() * 9000; }
+    // whales sing from the shallows down (louder the deeper you go); gulls over the sea surface; songbirds by the islands
+    if (s > 3.4 && now > nextCall) { if (nextCall) whaleSong(0.5 + 0.5 * Math.min(1, (s - 3.4) / 1.5)); nextCall = now + 7000 + Math.random() * 8000; }
+    const shore = band(s, 2.1, 2.6, 3.2, 3.5);
+    if (shore > 0.05 && now > nextGull) { if (nextGull) gull(shore); nextGull = now + 2500 + Math.random() * 4500; }
+    const sky = band(s, 1.3, 1.9, 3.0, 3.35);
+    if (sky > 0.05 && now > nextChirp) { if (nextChirp) chirps(sky * 0.8); nextChirp = now + 1800 + Math.random() * 3500; }
     if (s > 3.4 && now > nextBubble) { bubble(Math.min(1, s - 3.4)); nextBubble = now + 500 + Math.random() * 2600; }
   },
   // a soft two-note chime for button presses

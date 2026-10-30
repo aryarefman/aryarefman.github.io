@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ufo } from "./creatures.js";
@@ -149,67 +150,117 @@ function softDot() {
   return new THREE.CanvasTexture(c);
 }
 
-// low-poly islands and icebergs scattered along the horizon so the open sea is not empty;
-// the Water mirror reflects them for free
+// Islands and icebergs scattered along the horizon so the open sea is not empty (the Water mirror reflects them).
+// Islands are smooth noise-shaped terrain painted by height and slope: wet sand at the shore, jungle on the low
+// slopes, bare rock where it is steep, snow on the tallest peaks. Icebergs are noise-displaced spheres with a
+// sheared waterline, white above and glacier blue in the creases.
 function horizonIsles() {
   let seed = 91; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const group = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, emissive: 0x2a1a40, emissiveIntensity: 0.35 });
-  const sand = new THREE.Color(0xf6d39a), grass = new THREE.Color(0x3fcf78), jungle = new THREE.Color(0x1f9a68), rock = new THREE.Color(0x9a86b8), snow = new THREE.Color(0xffffff);
-  const ice = new THREE.Color(0xe6fbff), iceDeep = new THREE.Color(0x7fd8f0), c = new THREE.Color();
-  function paint(geo, pick) {
-    const pos = geo.attributes.position, col = [];
-    geo.computeBoundingBox();
-    const { min, max } = geo.boundingBox;
-    for (let i = 0; i < pos.count; i++) { pick((pos.getY(i) - min.y) / (max.y - min.y || 1), c); col.push(c.r, c.g, c.b); }
-    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  const hash3 = (x, y, z) => { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return v - Math.floor(v); };
+  const smooth = (t) => t * t * (3 - 2 * t);
+  function noise3(x, y, z) {   // value noise, trilinear with smoothstep
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), u = smooth(x - xi), v = smooth(y - yi), w = smooth(z - zi);
+    const l = (a, b, t) => a + (b - a) * t;
+    const c = (i, j, k) => hash3(xi + i, yi + j, zi + k);
+    return l(l(l(c(0, 0, 0), c(1, 0, 0), u), l(c(0, 1, 0), c(1, 1, 0), u), v), l(l(c(0, 0, 1), c(1, 0, 1), u), l(c(0, 1, 1), c(1, 1, 1), u), v), w);
   }
-  // offsets come from a hash of the vertex position, so duplicated seam vertices move together and the mesh stays closed
-  const salt = rnd() * 100;
-  const hash = (x, y, z, k) => { const v = Math.sin(x * 12.99 + y * 78.23 + z * 37.72 + k * 4.1 + salt) * 43758.55; return v - Math.floor(v) - 0.5; };
-  function jitter(geo, amt, keepBase) {
+  const fbm = (x, y, z, o = 5) => { let a = 0.5, f = 1, sum = 0; for (let i = 0; i < o; i++) { sum += a * noise3(x * f, y * f, z * f); f *= 2.03; a *= 0.5; } return sum; };
+  const group = new THREE.Group();
+  const C = (h) => new THREE.Color(h);
+  const wetSand = C(0xc9a77a), sand = C(0xf2d7a6), grass = C(0x5fbf5a), jungle = C(0x2c8a4e), deepJungle = C(0x1d6b45), rock = C(0x8c7f96), rockDark = C(0x5e5470), snow = C(0xffffff);
+  const col = new THREE.Color();
+
+  function island(x, z, r, peak, snowy) {
+    const ox = rnd() * 100, oz = rnd() * 100, N = 72;
+    const geo = new THREE.PlaneGeometry(r * 2.4, r * 2.4, N, N); geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-      if (keepBase && y <= geo.boundingBox.min.y + 0.01) continue;
-      const qx = Math.round(x * 100) / 100, qy = Math.round(y * 100) / 100, qz = Math.round(z * 100) / 100;
-      pos.setXYZ(i, x + hash(qx, qy, qz, 1) * amt, y + hash(qx, qy, qz, 2) * amt * 0.6, z + hash(qx, qy, qz, 3) * amt);
+      const px = pos.getX(i), pz = pos.getZ(i);
+      // an irregular coastline: the radius itself wobbles with noise
+      const ang = Math.atan2(pz, px), d = Math.hypot(px, pz) / (r * (0.8 + 0.35 * fbm(Math.cos(ang) * 1.5 + ox, Math.sin(ang) * 1.5 + oz, 0, 3)));
+      const dome = Math.max(0, 1 - d * d);
+      const ridges = fbm(px / r * 2.2 + ox, 0, pz / r * 2.2 + oz);
+      const ridge = 1 - Math.abs(fbm(px / r * 1.3 + oz, 7, pz / r * 1.3 + ox, 4) * 2 - 1);   // sharp ridgelines
+      let h = peak * Math.pow(dome, 1.6) * (0.45 + 0.75 * ridges + 0.45 * ridge * dome);
+      h = d < 1 ? h + 1.2 * smooth(Math.min(1, (1 - d) * 6)) : -4;   // a low beach shelf, then drop below the waterline
+      pos.setY(i, h);
     }
-  }
-  function island(x, z, s) {
-    const g = new THREE.Group();
-    const beach = new THREE.Mesh(new THREE.CylinderGeometry(95 * s, 110 * s, 6, 14).toNonIndexed(), mat);
-    paint(beach.geometry, (_, out) => out.copy(sand)); beach.position.y = 1;
-    g.add(beach);
-    const peaks = 1 + Math.floor(rnd() * 3);
-    for (let p = 0; p < peaks; p++) {
-      const h = (38 + rnd() * 52) * s * (p ? 0.6 : 1), r = (70 + rnd() * 30) * s * (p ? 0.7 : 1);
-      // a squashed, lumpy dome reads as a hill rather than a spike
-      const geo = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-      geo.scale(r, h, r * (0.75 + rnd() * 0.3));
-      geo.computeBoundingBox(); jitter(geo, 14 * s, true);
-      const g2 = geo.toNonIndexed();
-      paint(g2, (k, out) => (k < 0.15 ? out.copy(grass) : k < 0.7 ? out.copy(jungle).lerp(grass, 0.35 - k * 0.3) : k < 0.9 || h < 60 * s ? out.copy(rock).lerp(jungle, 0.3) : out.copy(snow)));
-      const m = new THREE.Mesh(g2, mat);
-      m.position.set(p ? (rnd() - 0.5) * 100 * s : 0, 2, p ? (rnd() - 0.5) * 40 * s : 0);
-      g.add(m);
+    geo.computeVertexNormals();
+    const nrm = geo.attributes.normal, colors = [];
+    for (let i = 0; i < pos.count; i++) {
+      const h = pos.getY(i), slope = 1 - nrm.getY(i), k = h / peak, n = fbm(pos.getX(i) * 0.08 + ox, h * 0.05, pos.getZ(i) * 0.08, 3);
+      if (h < 0.6) col.copy(wetSand);
+      else if (h < 2.6) col.copy(sand).lerp(wetSand, 0.2 * n);
+      else col.copy(grass).lerp(jungle, smooth(Math.min(1, (h - 2.6) / 10))).lerp(deepJungle, 0.5 * n);
+      if (slope > 0.32 && h > 4) col.lerp(rock, smooth(Math.min(1, (slope - 0.32) * 4))).lerp(rockDark, 0.3 * n);
+      if (k > 0.62) col.lerp(rock, smooth(Math.min(1, (k - 0.62) * 5)));
+      if (snowy && k > 0.74 && slope < 0.55) col.lerp(snow, smooth(Math.min(1, (k - 0.74) * 6)));
+      colors.push(col.r, col.g, col.b);
     }
-    g.position.set(x, -1, z); g.rotation.y = rnd() * Math.PI;
-    return g;
-  }
-  function iceberg(x, z, s) {
-    const geo = new THREE.IcosahedronGeometry(30 * s, 1);
-    geo.computeBoundingBox(); jitter(geo, 14 * s, false);
-    geo.scale(1.3, 1.1 + rnd() * 0.7, 1);
-    const g2 = geo.index ? geo.toNonIndexed() : geo;   // the icosahedron is already non-indexed
-    paint(g2, (k, out) => out.copy(iceDeep).lerp(ice, Math.min(1, k * 1.6)));
-    const m = new THREE.Mesh(g2, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.35, emissive: 0x4fb8d8, emissiveIntensity: 0.25 }));
-    m.position.set(x, 4 * s, z); m.rotation.y = rnd() * Math.PI;
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, emissive: 0x2a1840, emissiveIntensity: 0.25 }));
+    m.position.set(x, 0, z); m.rotation.y = rnd() * Math.PI * 2;
     return m;
   }
-  [[-280, -520, 1.0], [200, -720, 1.4], [560, -480, 0.8], [-660, -780, 1.6], [20, -980, 1.2], [-900, -560, 0.9]].forEach(([x, z, s]) => group.add(island(x, z, s)));
-  [[-130, -330, 0.7], [330, -380, 0.9], [-440, -420, 1.1], [740, -660, 1.3], [-60, -620, 0.8]].forEach(([x, z, s]) => group.add(iceberg(x, z, s)));
+
+  function iceberg(x, z, r) {
+    const ox = rnd() * 50;
+    let geo = new THREE.IcosahedronGeometry(1, 5);
+    geo.deleteAttribute("normal"); geo.deleteAttribute("uv");
+    geo = BufferGeometryUtils.mergeVertices(geo);
+    const pos = geo.attributes.position, p = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      p.fromBufferAttribute(pos, i);
+      // big blocky lobes plus fine fracture detail, then a flattened, sheared top like a tabular berg
+      const n = fbm(p.x * 1.6 + ox, p.y * 1.6, p.z * 1.6, 5);
+      p.multiplyScalar(r * (0.72 + 0.6 * n));
+      p.y = p.y > 0 ? Math.min(p.y * (1.1 + 0.5 * noise3(p.x * 0.05 + ox, 0, p.z * 0.05)), r * 0.95) : p.y * 0.5;
+      pos.setXYZ(i, p.x * 1.25, p.y, p.z);
+    }
+    geo.computeVertexNormals();
+    const nrm = geo.attributes.normal, colors = [], white = C(0xf4fcff), blue = C(0x6fcde6), deep = C(0x2a8fb8);
+    for (let i = 0; i < pos.count; i++) {
+      const up = nrm.getY(i), y = pos.getY(i);
+      col.copy(blue).lerp(white, smooth(THREE.MathUtils.clamp(up * 0.8 + 0.45, 0, 1)));   // flat tops catch snow, steep faces show ice
+      if (y < r * 0.12) col.lerp(deep, smooth(THREE.MathUtils.clamp((r * 0.12 - y) / (r * 0.3), 0, 1)));   // darker near the waterline
+      colors.push(col.r, col.g, col.b);
+    }
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.28, metalness: 0, emissive: 0x3aa6c8, emissiveIntensity: 0.18 }));
+    m.position.set(x, 0, z); m.rotation.y = rnd() * Math.PI;
+    return m;
+  }
+
+  // [x, z, radius, peak height, snow-capped]
+  [[-300, -540, 110, 70, false], [210, -740, 150, 120, true], [580, -500, 90, 45, false], [-680, -800, 170, 140, true], [20, -1000, 130, 85, false], [-920, -580, 100, 55, false]]
+    .forEach(([x, z, r, h, sn]) => group.add(island(x, z, r, h, sn)));
+  [[-130, -330, 22], [330, -380, 28], [-440, -420, 34], [740, -660, 40], [-60, -620, 24]].forEach(([x, z, r]) => group.add(iceberg(x, z, r)));
   return group;
+}
+
+// Steer a creature along a looping path like a real swimmer: it eases toward its new heading instead of snapping,
+// banks into turns in proportion to how hard the path curves, never pitches steeper than maxPitch, and beats its
+// tail faster when it speeds up and slower when it glides.
+const _p0 = new THREE.Vector3(), _p1 = new THREE.Vector3(), _p2 = new THREE.Vector3(), _vel = new THREE.Vector3(), _acc = new THREE.Vector3();
+const _euler = new THREE.Euler(0, 0, 0, "YXZ"), _goal = new THREE.Quaternion();
+function swim(o, path, t, dt, { look = 0.35, bank = 0.45, maxPitch = 0.3, turnRate = 3 } = {}) {
+  path(t - look, _p0); path(t, _p1); path(t + look, _p2);
+  o.position.copy(_p1);
+  _vel.subVectors(_p2, _p0).divideScalar(2 * look);
+  _acc.copy(_p2).sub(_p1).sub(_p1).add(_p0).divideScalar(look * look);
+  const speed = _vel.length() || 1e-6;
+  const yaw = Math.atan2(_vel.x, _vel.z);
+  const pitch = THREE.MathUtils.clamp(Math.atan2(_vel.y, Math.hypot(_vel.x, _vel.z)), -maxPitch, maxPitch);
+  const lateral = (_vel.z * _acc.x - _vel.x * _acc.z) / speed;   // sideways acceleration: + when turning left
+  const roll = THREE.MathUtils.clamp(-lateral * 0.12, -bank, bank);
+  _goal.setFromEuler(_euler.set(-pitch, yaw, roll));
+  if (!o.userData.steered) { o.quaternion.copy(_goal); o.userData.steered = true; }
+  else o.quaternion.slerp(_goal, 1 - Math.exp(-dt * turnRate));
+  const a = o.userData.action;
+  if (a && o.userData.length) {
+    const pace = THREE.MathUtils.clamp(speed / o.userData.length / 0.45, 0.6, 1.8);   // body lengths per second vs a calm cruise
+    a.timeScale += (o.userData.baseSpeed * pace - a.timeScale) * Math.min(1, dt * 2);
+  }
 }
 
 export function createBackdrop(canvas, { mobile = false, reduceMotion = false } = {}) {
@@ -303,16 +354,18 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   // a jelly humpback whale gliding through the abyss
   const sardines = fishSchool(uniforms, mobile ? 70 : 150, "sardine", {
     hi: !mobile, spread: [5, 3, 5], size: [1.3, 1.8],
-    path: (q) => new THREE.Vector3(13 + Math.cos(q * 0.45) * 6, -25 + Math.sin(q * 0.9) * 1.2, -32 + Math.sin(q * 0.45) * 4),
+    path: (q, out = new THREE.Vector3()) => out.set(13 + Math.cos(q * 0.45) * 6, -25 + Math.sin(q * 0.9) * 1.2, -32 + Math.sin(q * 0.45) * 4),
   });
   const lantern = fishSchool(uniforms, mobile ? 30 : 60, "lantern", {
     hi: !mobile, spread: [9, 5, 7], size: [1.0, 1.5], seed: 77,
-    path: (q) => new THREE.Vector3(14 + Math.cos(q * 0.25) * 7, -88 + Math.sin(q * 0.4) * 2, -34 + Math.sin(q * 0.25) * 5),
+    path: (q, out = new THREE.Vector3()) => out.set(14 + Math.cos(q * 0.25) * 7, -88 + Math.sin(q * 0.4) * 2, -34 + Math.sin(q * 0.25) * 5),
   });
   const turtle = creature("sea_turtle", 5);
-  const turtlePath = (q) => new THREE.Vector3(24 - ((q * 1.1) % 52), -27 + Math.sin(q * 0.3) * 1.2, -22 + Math.sin(q * 0.15) * 2);
+  // a slow oval loop (it used to slide across and jump back to the start)
+  const turtlePath = (q, out = new THREE.Vector3()) => out.set(10 + Math.cos(q * 0.09) * 16, -27 + Math.sin(q * 0.3) * 1.2, -24 + Math.sin(q * 0.09) * 6);
   const whale = creature("humpback_whale", 22, { speed: 0.6 });
-  const whalePath = (q) => new THREE.Vector3(9 + Math.cos(q * 0.06) * 14, -133 + Math.sin(q * 0.12) * 1.2, -40 + Math.sin(q * 0.06) * 8);
+  // high enough above the reef that the tail never dips into it
+  const whalePath = (q, out = new THREE.Vector3()) => out.set(9 + Math.cos(q * 0.06) * 16, -127 + Math.sin(q * 0.12) * 1.2, -48 + Math.sin(q * 0.06) * 9);
   scene.add(sardines, lantern, turtle, whale);
   // a school of real scanned barramundi (CC0 model from the Khronos glTF sample assets) in the shallows;
   // the stylised sardines stay as the fallback until the model has loaded
@@ -320,7 +373,8 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   let barra = null;
   new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("models/barramundi.glb", (gltf) => {
     let src = null; gltf.scene.traverse((o) => { if (o.isMesh && !src) src = o; });
-    const geo = src.geometry.clone(); geo.translate(0, -0.14, 0);                 // centre the body on its spine
+    // the raw mesh has its snout at -z (the file turns it with a node rotation we skip), so turn it to face +z
+    const geo = src.geometry.clone(); geo.rotateY(Math.PI); geo.translate(0, -0.14, 0);   // and centre the body on its spine
     const mat = src.material.clone();
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = uniforms.uTime;
@@ -341,20 +395,20 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const bPlace = (f, q, out) => out.copy(barraPath(q - f.lag)).add(f.off).add(bWob.set(Math.sin(q * 0.6 + f.ph) * 0.5, Math.sin(q * 0.8 + f.ph) * 0.25, Math.cos(q * 0.5 + f.ph) * 0.5));
   // the reference creatures, one or two per depth, each swimming its own loop on the right of the text column
   const swimmers = [
-    { o: creature("dolphin", 7), s: 1, ymin: -12, path: (q) => new THREE.Vector3(18 + Math.cos(q * 0.32) * 9, -9 + Math.sin(q * 0.64) * 2.5, -30 + Math.sin(q * 0.32) * 7) },
-    { o: creature("dolphin", 6.5), s: 1, ymin: -12, path: (q) => new THREE.Vector3(18 + Math.cos(q * 0.32 + 0.5) * 10, -10.5 + Math.sin(q * 0.64 + 1) * 2.5, -32 + Math.sin(q * 0.32 + 0.5) * 7) },
-    { o: creature("manta_ray", 8), s: 1, ymin: -50, path: (q) => new THREE.Vector3(14 + Math.cos(q * 0.22) * 12, -40 + Math.sin(q * 0.3) * 2, -30 + Math.sin(q * 0.22) * 6) },
-    { o: creature("hammerhead", 9), s: 1, ymin: -80, path: (q) => new THREE.Vector3(16 + Math.cos(-q * 0.13) * 12, -66 + Math.sin(q * 0.2) * 2, -36 + Math.sin(-q * 0.13) * 8) },
+    { o: creature("dolphin", 7), s: 1, ymin: -12, path: (q, out = new THREE.Vector3()) => out.set(18 + Math.cos(q * 0.32) * 9, -9 + Math.sin(q * 0.64) * 2.5, -30 + Math.sin(q * 0.32) * 7) },
+    { o: creature("dolphin", 6.5), s: 1, ymin: -12, path: (q, out = new THREE.Vector3()) => out.set(18 + Math.cos(q * 0.32 + 0.5) * 10, -10.5 + Math.sin(q * 0.64 + 1) * 2.5, -32 + Math.sin(q * 0.32 + 0.5) * 7) },
+    { o: creature("manta_ray", 8), s: 1, ymin: -50, path: (q, out = new THREE.Vector3()) => out.set(14 + Math.cos(q * 0.22) * 12, -40 + Math.sin(q * 0.3) * 2, -30 + Math.sin(q * 0.22) * 6) },
+    { o: creature("hammerhead", 9), s: 1, ymin: -80, path: (q, out = new THREE.Vector3()) => out.set(16 + Math.cos(-q * 0.13) * 12, -66 + Math.sin(q * 0.2) * 2, -36 + Math.sin(-q * 0.13) * 8) },
     // colourful and unusual species, so each depth is not just grey whales and sharks
-    { o: creature("orca", 10), s: 1, ymin: -16, path: (q) => new THREE.Vector3(-8 + Math.cos(-q * 0.2) * 14, -14 + Math.sin(q * 0.4) * 2, -40 + Math.sin(-q * 0.2) * 8) },
-    { o: creature("blue_tang", 1.6), s: 1, ymin: -24, path: (q) => new THREE.Vector3(8 + Math.cos(q * 0.6) * 5, -22 + Math.sin(q * 1.1) * 1, -18 + Math.sin(q * 0.6) * 3) },
-    { o: creature("blue_tang", 1.4), s: 1, ymin: -24, path: (q) => new THREE.Vector3(8 + Math.cos(q * 0.6 + 0.4) * 5.6, -21 + Math.sin(q * 1.1 + 1) * 1, -18 + Math.sin(q * 0.6 + 0.4) * 3.4) },
-    { o: creature("powder_tang", 1.5), s: 1, ymin: -26, path: (q) => new THREE.Vector3(12 + Math.cos(-q * 0.5) * 4, -24 + Math.sin(q) * 0.8, -20 + Math.sin(-q * 0.5) * 3) },
-    { o: creature("parrotfish", 2.6), s: 1, ymin: -32, path: (q) => new THREE.Vector3(4 + Math.cos(q * 0.35) * 7, -30 + Math.sin(q * 0.7) * 1.2, -24 + Math.sin(q * 0.35) * 4) },
-    { o: creature("lionfish", 2.4), s: 1, ymin: -46, path: (q) => new THREE.Vector3(24 + Math.cos(q * 0.15) * 2, -44 + Math.sin(q * 0.5) * 0.6, -22 + Math.sin(q * 0.15) * 1.5) },
-    { o: creature("sea_dragon", 2.6), s: 1, ymin: -52, path: (q) => new THREE.Vector3(2 + Math.cos(q * 0.1) * 2, -50 + Math.sin(q * 0.4) * 0.8, -20 + Math.sin(q * 0.1) * 1.5) },
-    { o: creature("narwhal", 11), s: 1, ymin: -80, path: (q) => new THREE.Vector3(-6 + Math.cos(q * 0.1) * 14, -76 + Math.sin(q * 0.18) * 2, -46 + Math.sin(q * 0.1) * 8) },
-    { o: creature("whale_shark", 16), s: 1, ymin: -110, path: (q) => new THREE.Vector3(12 + Math.cos(q * 0.07) * 16, -96 + Math.sin(q * 0.11) * 2, -50 + Math.sin(q * 0.07) * 10) },
+    { o: creature("orca", 10), s: 1, ymin: -16, path: (q, out = new THREE.Vector3()) => out.set(-8 + Math.cos(-q * 0.2) * 14, -14 + Math.sin(q * 0.4) * 2, -40 + Math.sin(-q * 0.2) * 8) },
+    { o: creature("blue_tang", 1.6), s: 1, ymin: -24, path: (q, out = new THREE.Vector3()) => out.set(8 + Math.cos(q * 0.6) * 5, -22 + Math.sin(q * 1.1) * 1, -18 + Math.sin(q * 0.6) * 3) },
+    { o: creature("blue_tang", 1.4), s: 1, ymin: -24, path: (q, out = new THREE.Vector3()) => out.set(8 + Math.cos(q * 0.6 + 0.4) * 5.6, -21 + Math.sin(q * 1.1 + 1) * 1, -18 + Math.sin(q * 0.6 + 0.4) * 3.4) },
+    { o: creature("powder_tang", 1.5), s: 1, ymin: -26, path: (q, out = new THREE.Vector3()) => out.set(12 + Math.cos(-q * 0.5) * 4, -24 + Math.sin(q) * 0.8, -20 + Math.sin(-q * 0.5) * 3) },
+    { o: creature("parrotfish", 2.6), s: 1, ymin: -32, path: (q, out = new THREE.Vector3()) => out.set(4 + Math.cos(q * 0.35) * 7, -30 + Math.sin(q * 0.7) * 1.2, -24 + Math.sin(q * 0.35) * 4) },
+    { o: creature("lionfish", 2.4), s: 1, ymin: -46, path: (q, out = new THREE.Vector3()) => out.set(24 + Math.cos(q * 0.15) * 2, -44 + Math.sin(q * 0.5) * 0.6, -22 + Math.sin(q * 0.15) * 1.5) },
+    { o: creature("sea_dragon", 2.6), s: 1, ymin: -52, path: (q, out = new THREE.Vector3()) => out.set(2 + Math.cos(q * 0.1) * 2, -50 + Math.sin(q * 0.4) * 0.8, -20 + Math.sin(q * 0.1) * 1.5) },
+    { o: creature("narwhal", 11), s: 1, ymin: -80, path: (q, out = new THREE.Vector3()) => out.set(-6 + Math.cos(q * 0.1) * 14, -76 + Math.sin(q * 0.18) * 2, -46 + Math.sin(q * 0.1) * 8) },
+    { o: creature("whale_shark", 16), s: 1, ymin: -110, path: (q, out = new THREE.Vector3()) => out.set(12 + Math.cos(q * 0.07) * 16, -96 + Math.sin(q * 0.11) * 2, -50 + Math.sin(q * 0.07) * 10) },
   ];
   swimmers.forEach((sw) => { sw.o.scale.setScalar(sw.s); scene.add(sw.o); });
   const octo = creature("octopus", 6); octo.position.set(17, -140.2, -24); octo.rotation.y = -0.5; scene.add(octo);
@@ -365,7 +419,11 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
   const slug = creature("nudibranch", 1.2); slug.position.set(9, -140.9, -21); slug.rotation.y = -0.9; scene.add(slug);
   // a UFO with an alien pilot drifting over the starry sky at the top of the page
   // a pirate galleon sailing the night sea, seen as we come down to the surface
-  const ship = creature("pirate_ship", 46); ship.position.set(30, 13, -95); ship.rotation.y = -1.9; ship.userData.update = (q) => { ship.rotation.z = Math.sin(q * 0.7) * 0.03; ship.position.y = 13 + Math.sin(q * 0.9) * 0.3; }; scene.add(ship);
+  const ship = creature("pirate_ship", 46); ship.position.set(30, 13, -95); ship.rotation.y = -1.9; ship.userData.update = (q) => {   // sails a wide, slow oval facing where it goes, rolling and pitching on the swell
+    const a = q * 0.012, x = 20 + Math.cos(a) * 70, z = -112 + Math.sin(a) * 26;
+    ship.position.set(x, 13 + Math.sin(q * 0.9) * 0.3, z);
+    ship.rotation.set(Math.sin(q * 0.55) * 0.012, Math.atan2(-Math.sin(a) * 70, Math.cos(a) * 26), Math.sin(q * 0.7) * 0.03, "YXZ");
+  }; scene.add(ship);
   const saucer = ufo(uniforms); saucer.scale.setScalar(15); saucer.userData.setBase(new THREE.Vector3(-120, 1140, -250)); scene.add(saucer);
   // a pod of dolphins leaping out of the open sea right of the island, and a humpback whale breaching further out,
   // each throwing up white spray as it leaves and re-enters the water
@@ -499,7 +557,7 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
       dome.visible = water.visible = clouds.visible = above;
       ship.visible = above && y < 260;
       isles.visible = above && y < 320;
-      if (ship.visible) { ship.userData.update(t); ship.position.x = 30 - ((t * 0.8) % 80) + 20; }
+      if (ship.visible) ship.userData.update(t);
       surfaceLife(t, dt, ship.visible);
       show(saucer, y > 300);
       if (saucer.userData.shown) saucer.userData.update(t);
@@ -540,14 +598,14 @@ export function createBackdrop(canvas, { mobile = false, reduceMotion = false } 
         }
         if (sardines.visible) {
           sardines.userData.update(t);
-          turtle.position.copy(turtlePath(t)); turtle.lookAt(turtlePath(t + 0.5));
+          swim(turtle, turtlePath, t, dt, { look: 0.8, bank: 0.3 });
         }
         if (lantern.visible) lantern.userData.update(t);
-        if (whale.visible) { whale.position.copy(whalePath(t)); whale.lookAt(whalePath(t + 1)); }
+        if (whale.visible) swim(whale, whalePath, t, dt, { look: 1.5, bank: 0.25, maxPitch: 0.15, turnRate: 1.2 });
         clowns.position.set(12 + Math.cos(t * 0.5) * 3, -138 + Math.sin(t) * 0.4, -26 + Math.sin(t * 0.5) * 2); clowns.rotation.y = -t * 0.5; seahorse.position.y = -138.6 + Math.sin(t * 0.8) * 0.25; seahorse.rotation.z = Math.sin(t * 0.6) * 0.08;
         jellies.forEach((j, n) => { j.position.y = j.userData.base + Math.sin(t * 0.3 + n) * 1.5; j.rotation.y = t * 0.05 * (n % 2 ? 1 : -1); });
         kelp.forEach((k, n) => (k.rotation.z = Math.sin(t * 0.6 + n) * 0.06));
-        swimmers.forEach((sw) => { if (sw.o.visible) { sw.o.position.copy(sw.path(t)); sw.o.lookAt(sw.path(t + 0.3)); } });
+        swimmers.forEach((sw) => { if (sw.o.visible) swim(sw.o, sw.path, t, dt); });
         glowMat.color.setHSL(hue % 1, 0.8, 0.6);
       }
       for (const o of [turtle, whale, octo, angler, clowns, slug, breacher, ...leapers.map((l) => l.o), ...jellies, ...swimmers.map((sw) => sw.o)]) if (o.userData.mixer && o.visible) o.userData.mixer.update(dt);

@@ -43,6 +43,7 @@ export function creature(name, length, { speed = 1 } = {}) {
   const cfg = MODELS[name];
   const holder = new THREE.Group();
   holder.userData.mixer = null;
+  holder.userData.length = length;
   holder.userData.ready = source(name).then((gltf) => {
     const model = cfg.still ? gltf.scene.clone(true) : cloneSkinned(gltf.scene);
     if (cfg.hide) model.traverse((o) => { if (o.isMesh && (cfg.hide.test(o.name) || cfg.hide.test(o.material?.name || ""))) o.visible = false; });
@@ -74,6 +75,7 @@ export function creature(name, length, { speed = 1 } = {}) {
       action.time = Math.random() * gltf.animations[0].duration;
       action.timeScale = speed;
       holder.userData.mixer = mixer;
+      holder.userData.action = action; holder.userData.baseSpeed = speed;   // swim() in backdrop.js scales this with pace
     }
     return holder;
   }).catch((e) => console.warn("model failed", name, e));
