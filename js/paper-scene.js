@@ -1,223 +1,271 @@
-// The window torn into the paper: a red-lit void where Arya stands on a glowing floor of slow ripples, under an
-// arch, with the eight projects orbiting as paper cards (picture on the front, bare paper on the back).
-// The camera starts close on the face and pulls back; dragging or scrolling spins the ring of cards.
+// The 3D home of paper mode. A dark figure with glowing eyes stands on a vast red-lit dome under an arch;
+// the eight projects orbit him as glowing image cards. The intro holds on the face, glitches (RGB split and
+// colour-cycling eyes), then the camera swoops up through drifting dust to a high wide shot.
+// Bloom and the RGB split come from a small post-processing chain.
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
-const RED = new THREE.Color(0xff3a1e);
+const RED = new THREE.Color(0xff2a14);
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-function floorMaterial(uniforms) {
+// final pass: RGB split (strong during the glitch), vignette and film grain
+const FinishShader = {
+  uniforms: { tDiffuse: { value: null }, uShift: { value: 0 }, uTime: { value: 0 } },
+  vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse; uniform float uShift, uTime; varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime) * 43758.5453); }
+    void main() {
+      vec2 dir = (vUv - 0.5) * uShift;
+      float band = step(0.5, fract(vUv.y * 40.0 + uTime * 9.0)) * uShift * 0.4;    // torn scanlines while glitching
+      vec2 uv = vUv + vec2(band * 0.02, 0.0);
+      vec3 c = vec3(texture2D(tDiffuse, uv + dir).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - dir).b);
+      c *= 1.0 - 0.55 * pow(length(vUv - 0.5) * 1.25, 2.2);                           // vignette
+      c += (hash(vUv * 900.0) - 0.5) * 0.045;                                        // grain
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+};
+
+function domeMaterial(uniforms) {
   return new THREE.ShaderMaterial({
     uniforms,
-    vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    vertexShader: "varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }",
     fragmentShader: /* glsl */ `
-      uniform float uTime; uniform vec3 uRed; varying vec2 vUv;
+      uniform float uTime; uniform vec3 uRed; varying vec3 vW;
       void main() {
-        float d = length(vUv - 0.5) * 2.0;
-        float glow = pow(clamp(1.0 - d, 0.0, 1.0), 1.7);
-        float rings = 0.5 + 0.5 * sin(d * 150.0 - uTime * 1.6);                    // fine ripples spreading out
-        float hot = exp(-d * d * 90.0);                                             // the bright spot under the figure
-        vec3 col = uRed * glow * (0.78 + 0.22 * rings) + vec3(1.0, 0.75, 0.62) * hot * 0.55;
+        float r = length(vW.xz);
+        float glow = exp(-r * 0.055);
+        float rings = 0.5 + 0.5 * sin(r * 9.0 - uTime * 1.4);                        // fine ripples rolling outward
+        float hot = exp(-r * r * 0.12);
+        vec3 col = uRed * (0.12 + 0.95 * glow) * (0.86 + 0.14 * rings) + vec3(1.0, 0.62, 0.5) * hot * 0.5;
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
 }
 
-// the photo, lit only from behind: dark in the middle, a red rim where the silhouette meets the light
-function figureMaterial(map, uniforms, mirror) {
-  return new THREE.ShaderMaterial({
-    uniforms: { ...uniforms, uMap: { value: map }, uMirror: { value: mirror ? 1 : 0 } },
-    transparent: true, depthWrite: false, depthTest: !mirror,   // the reflection lies under the floor, so it draws over it
-    vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: /* glsl */ `
-      uniform sampler2D uMap; uniform vec3 uRed; uniform float uMirror, uTime; varying vec2 vUv;
-      void main() {
-        vec4 c = texture2D(uMap, vUv);
-        if (c.a < 0.02) discard;
-        // how much of the neighbourhood is empty: high at the silhouette edge
-        float e = 0.0; vec2 o = vec2(0.012, 0.007);
-        e += texture2D(uMap, vUv + vec2(o.x, 0)).a + texture2D(uMap, vUv - vec2(o.x, 0)).a;
-        e += texture2D(uMap, vUv + vec2(0, o.y)).a + texture2D(uMap, vUv - vec2(0, o.y)).a;
-        float rim = clamp(1.0 - e / 4.0, 0.0, 1.0) * 2.4;
-        float lum = dot(c.rgb, vec3(0.3, 0.59, 0.11));
-        vec3 body = mix(vec3(lum) * 0.32, c.rgb * 0.42, 0.45) * mix(vec3(1.0), uRed * 1.4, 0.35);
-        vec3 col = body + uRed * (rim + 0.18 * (1.0 - vUv.y));                     // red bounce from the floor below
-        float a = c.a;
-        if (uMirror > 0.5) { a *= 0.2 * (1.0 - smoothstep(0.2, 0.9, vUv.y)); col *= 0.8; }   // the reflection fades toward the head
-        gl_FragColor = vec4(col, a);
-      }`,
-  });
-}
-
+// cards show the project on both faces (unmirrored) with a bright paper border that blooms
 function cardMaterial(map) {
   return new THREE.ShaderMaterial({
     uniforms: { uMap: { value: map }, uHover: { value: 0 } },
-    side: THREE.DoubleSide,
+    side: THREE.DoubleSide, toneMapped: false,
     vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
     fragmentShader: /* glsl */ `
       uniform sampler2D uMap; uniform float uHover; varying vec2 vUv;
       void main() {
-        vec3 paper = vec3(0.56, 0.54, 0.5);
-        if (!gl_FrontFacing) { gl_FragColor = vec4(paper * 0.8, 1.0); return; }   // the back is bare paper
-        vec3 c = texture2D(uMap, vUv).rgb;
-        float g = dot(c, vec3(0.3, 0.59, 0.11));
-        c = mix(mix(vec3(g) * 0.85, paper, 0.25), c, 0.35 + 0.65 * uHover);       // muted until hovered
-        float edge = step(vUv.x, 0.012) + step(0.988, vUv.x) + step(vUv.y, 0.02) + step(0.98, vUv.y);
-        c = mix(c, vec3(1.0, 0.23, 0.12), min(1.0, edge) * uHover);                 // a red frame on the hovered card
+        vec2 uv = gl_FrontFacing ? vUv : vec2(1.0 - vUv.x, vUv.y);
+        float bx = min(uv.x, 1.0 - uv.x), by = min(uv.y, 1.0 - uv.y), border = 1.0 - step(0.025, min(bx, by * 1.6));
+        vec3 img = texture2D(uMap, vec2(mix(0.035, 0.965, uv.x), mix(0.055, 0.945, uv.y))).rgb;
+        vec3 c = mix(img * (0.85 + 0.35 * uHover), vec3(1.6, 1.55, 1.45), border);    // the border is over-bright so bloom halos it
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
 }
 
-export function createPaperScene(canvas, { images, onPick, onHover, reduceMotion = false }) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setClearColor(0x040101);
+// the figure: near-black body, a hot red fresnel rim (lit from the floor and the arch)
+function bodyMaterial() {
+  const m = new THREE.MeshStandardMaterial({ color: 0x050101, roughness: 0.6, metalness: 0.1 });
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      float fres = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.4);
+      totalEmissiveRadiance += vec3(1.0, 0.12, 0.04) * fres * 1.6;`);
+  };
+  return m;
+}
+
+export function createPaperScene(canvas, { images, onHover, onPick, reduceMotion = false }) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.setClearColor(0x000000);
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x040101, 0.035);
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+  scene.fog = new THREE.FogExp2(0x000000, 0.018);
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 300);
   const uniforms = { uTime: { value: 0 }, uRed: { value: RED } };
 
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 96), floorMaterial(uniforms));
-  floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.62);
+  composer.addPass(bloom);
+  const finish = new ShaderPass(FinishShader); composer.addPass(finish);
+  composer.addPass(new OutputPass());
 
-  // the arch behind the figure, with a soft additive halo
-  const arch = new THREE.Group(); arch.position.set(0, 0, -6.5); scene.add(arch);
-  arch.add(new THREE.Mesh(new THREE.TorusGeometry(6.2, 0.05, 12, 160), new THREE.MeshBasicMaterial({ color: 0xff5a3a })));
-  arch.add(new THREE.Mesh(new THREE.TorusGeometry(6.2, 0.55, 12, 160), new THREE.MeshBasicMaterial({ color: 0x8a0c04, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })));
+  // the dome: the top of a huge sphere, so the floor curves away into the dark like a small planet
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(70, 128, 64, 0, Math.PI * 2, 0, Math.PI / 2.4), domeMaterial(uniforms));
+  dome.position.y = -70; scene.add(dome);
 
-  // stars far away and embers drifting up off the floor
-  const rnd = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
-  const starPos = [];
-  for (let i = 0; i < 1600; i++) { const th = rnd() * Math.PI * 2, ph = Math.acos(rnd() * 0.9), r = 40 + rnd() * 40; starPos.push(Math.sin(ph) * Math.cos(th) * r, Math.cos(ph) * r * 0.8 + 2, Math.sin(ph) * Math.sin(th) * r - 10); }
-  const stars = new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(starPos, 3)),
-    new THREE.PointsMaterial({ color: 0xffe6dc, size: 0.09, sizeAttenuation: true, fog: false }));
-  scene.add(stars);
-  const EMB = 260, embPos = new Float32Array(EMB * 3), embSeed = [];
-  for (let i = 0; i < EMB; i++) embSeed.push([(rnd() - 0.5) * 14, rnd() * 6, (rnd() - 0.5) * 10 - 1, 0.15 + rnd() * 0.35]);
-  const embGeo = new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(embPos, 3));
-  const embers = new THREE.Points(embGeo, new THREE.PointsMaterial({ color: 0xffb08a, size: 0.05, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
-  scene.add(embers);
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(15, 0.22, 16, 220), new THREE.MeshBasicMaterial({ color: 0x5a0702 }));
+  arch.position.set(0, -1.5, -11); scene.add(arch);
+  const archHalo = new THREE.Mesh(new THREE.TorusGeometry(15, 1.4, 16, 220), new THREE.MeshBasicMaterial({ color: 0x3a0300, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  archHalo.position.copy(arch.position); scene.add(archHalo);
 
-  // the figure and its reflection
-  const loader = new THREE.TextureLoader();
-  const figTex = loader.load("img/arya-waterfall.webp"); figTex.colorSpace = THREE.SRGBColorSpace;
-  const FH = 2.7, FW = FH * 760 / 1264;
-  const figure = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), figureMaterial(figTex, uniforms, false));
-  figure.position.set(0, FH / 2 - 0.05, 0); scene.add(figure);
-  const mirror = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), figureMaterial(figTex, uniforms, true));
-  mirror.scale.y = -1; mirror.position.set(0, -FH / 2 + 0.05, 0); mirror.renderOrder = 1; scene.add(mirror);
+  // dust: a cloud of fine specks around the figure that the camera flies through, and far stars
+  const rnd = (() => { let s = 11; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+  const dust = [];
+  for (let i = 0; i < 2600; i++) { const a = rnd() * Math.PI * 2, r = 1.5 + Math.pow(rnd(), 0.7) * 16; dust.push(Math.cos(a) * r, 0.2 + rnd() * 12, Math.sin(a) * r); }
+  const dustPts = new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(dust, 3)),
+    new THREE.PointsMaterial({ color: 0xfff1ea, size: 0.035, transparent: true, opacity: 0.85, depthWrite: false }));
+  scene.add(dustPts);
+  const far = [];
+  for (let i = 0; i < 1800; i++) { const a = rnd() * Math.PI * 2, e = rnd() * 1.2, r = 90 + rnd() * 60; far.push(Math.cos(a) * Math.cos(e) * r, Math.sin(e) * r, Math.sin(a) * Math.cos(e) * r); }
+  scene.add(new THREE.Points(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(far, 3)),
+    new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, fog: false })));
 
-  // the ring of project cards, slightly curved like held paper
-  const ring = new THREE.Group(); scene.add(ring);
-  const R = 4.6, cards = [];
-  images.forEach((src, i) => {
-    const tex = loader.load(src); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    const geo = new THREE.PlaneGeometry(1.75, 1.12, 16, 1);
-    const pos = geo.attributes.position;
-    for (let k = 0; k < pos.count; k++) pos.setZ(k, -Math.pow(pos.getX(k) / 0.875, 2) * 0.09);
-    const card = new THREE.Mesh(geo, cardMaterial(tex));
-    const a = (i / images.length) * Math.PI * 2;
-    card.userData = { index: i, angle: a, baseY: 1.3 + (i % 3) * 0.55, hover: 0, bob: rnd() * 6 };
-    card.position.set(Math.sin(a) * R, card.userData.baseY, Math.cos(a) * R);
-    card.rotation.y = a;                           // the picture faces outward, toward the camera when in front
-    card.rotation.z = (rnd() - 0.5) * 0.12;
-    ring.add(card); cards.push(card);
+  scene.add(new THREE.HemisphereLight(0x401010, 0x200000, 0.6));
+  const under = new THREE.PointLight(0xff3018, 6, 10); under.position.set(0, 0.4, 1.2); scene.add(under);
+
+  // the figure (and its mirror image in the glossy floor), loaded async
+  const figure = new THREE.Group(), mirror = new THREE.Group(); scene.add(figure, mirror);
+  mirror.scale.y = -1;
+  const mixers = [], eyes = [], head = new THREE.Vector3(0, 1.62, 0);
+  let headBone = null;
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("models/xbot.glb", (gltf) => {
+    const body = bodyMaterial();
+    const setup = (root, isMirror) => {
+      root.traverse((o) => {
+        if (o.isMesh) {
+          o.frustumCulled = false;
+          o.material = isMirror ? new THREE.MeshBasicMaterial({ color: 0x5a0a04, transparent: true, opacity: 0.32, depthTest: false }) : body;
+          if (isMirror) o.renderOrder = 1;
+        }
+      });
+      const mx = new THREE.AnimationMixer(root);
+      const idle = gltf.animations.find((a) => a.name === "idle") || gltf.animations[0];
+      mx.clipAction(idle).play(); mixers.push(mx);
+    };
+    const main = gltf.scene, refl = cloneSkinned(gltf.scene);
+    setup(main, false); setup(refl, true);
+    figure.add(main); mirror.add(refl);
+    main.updateMatrixWorld(true);
+    // glowing eyes: placed in world space on the face (just in front of the eye bones) and parented to the head
+    // so they follow it; over-bright so the bloom turns them into lights
+    headBone = main.getObjectByName("mixamorigHead");
+    const hq = headBone.getWorldQuaternion(new THREE.Quaternion()).invert(), hs = 1 / headBone.getWorldScale(new THREE.Vector3()).x;
+    // (GLTFLoader strips the ":" from Mixamo bone names, so "mixamorig:LeftEye" arrives as "mixamorigLeftEye")
+    ["mixamorigLeftEye", "mixamorigRightEye"].forEach((n) => {
+      const bone = main.getObjectByName(n); if (!bone) return;
+      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 4, 4), toneMapped: false });
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), m);
+      const p = bone.getWorldPosition(new THREE.Vector3()); p.z += 0.085; p.x *= 1.15;
+      eye.position.copy(headBone.worldToLocal(p)); eye.quaternion.copy(hq);
+      eye.scale.set(0.012 * hs, 0.0055 * hs, 0.005 * hs);
+      headBone.add(eye); eyes.push(m);
+    });
   });
 
-  // camera: an intro dolly from the face out to the wide shot, then a gentle parallax with the pointer
-  const camFrom = { pos: new THREE.Vector3(0, 2.25, 2.1), look: new THREE.Vector3(0, 2.2, 0) };
-  const camTo = { pos: new THREE.Vector3(0, 3.1, 11.5), look: new THREE.Vector3(0, 1.35, 0) };
-  const look = new THREE.Vector3();
-  let intro = reduceMotion ? 1 : 0, started = false, spin = 0, spinVel = 0.06, target = null, hovered = -1, listHover = -1;
-  const pointer = new THREE.Vector2(9, 9), ray = new THREE.Raycaster(), par = { x: 0, y: 0 };
+  // the cards: a tilted ring that rises behind the figure and dips low in front of the camera
+  const ring = new THREE.Group(); ring.rotation.x = -0.42; ring.position.set(0, 5.2, -2); scene.add(ring);
+  const spinner = new THREE.Group(); ring.add(spinner);
+  const loader = new THREE.TextureLoader(), cards = [], R = 12;
+  images.forEach((src, i) => {
+    const tex = loader.load(src); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const geo = new THREE.PlaneGeometry(2.5, 1.6, 12, 1);
+    const p = geo.attributes.position;
+    for (let k = 0; k < p.count; k++) p.setZ(k, -Math.pow(p.getX(k) / 1.25, 2) * 0.12);   // a slight curl, like held paper
+    const card = new THREE.Mesh(geo, cardMaterial(tex));
+    const a = (i / images.length) * Math.PI * 2;
+    card.userData = { index: i, angle: a, hover: 0, tilt: (rnd() - 0.5) * 0.5 };
+    card.position.set(Math.sin(a) * R, 0, Math.cos(a) * R);
+    spinner.add(card); cards.push(card);
+  });
+
+  // camera choreography
+  const wide = { pos: new THREE.Vector3(0, 13.5, 15.5), look: new THREE.Vector3(0, 0.6, -2.5) };
+  const swoop = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 1.62, 1.05), new THREE.Vector3(1.6, 2.2, 2.6), new THREE.Vector3(4.5, 4.5, 4.2), new THREE.Vector3(3.5, 9.5, 10.5), wide.pos.clone()]);
+  const look = new THREE.Vector3(), tmp = new THREE.Vector3();
+  let started = false, t0 = 0, spin = 0, hovered = -1;
+  const T_HOLD = 2.6, T_GLITCH = 0.8, T_SWOOP = 4.6, spinVel = 0.05;
+  const pointer = new THREE.Vector2(9, 9), par = new THREE.Vector2(), ray = new THREE.Raycaster();
 
   function resize() {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.fov = w < h ? 50 : 38;                 // portrait screens need a wider lens and a longer pull-back to keep the ring in view
-    const a = w / h; camTo.pos.set(0, a < 1 ? 3.6 : 3.1, a < 1 ? 11.5 + (1 - a) * 12 : 11.5);
-    camera.updateProjectionMatrix();
+    const w = canvas.clientWidth, h = canvas.clientHeight, a = w / h;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, a < 1 ? 1.5 : 1.75));
+    renderer.setSize(w, h, false); composer.setSize(w, h);
+    bloom.setSize(w / 2, h / 2);
+    camera.aspect = a; camera.fov = a < 1 ? 62 : 42; camera.updateProjectionMatrix();
+    wide.pos.set(0, a < 1 ? 17 : 13.5, a < 1 ? 21 : 15.5);
+    swoop.points[4].copy(wide.pos);
   }
   resize();
 
+  let drag = null, downX = 0;
   canvas.addEventListener("pointermove", (e) => {
     const r = canvas.getBoundingClientRect();
     pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    par.x = pointer.x; par.y = pointer.y;
-    if (drag) { spinVel = 0; spin += (e.clientX - drag) * 0.006; drag = e.clientX; target = null; }
+    par.copy(pointer);
+    if (drag !== null) { spin += (e.clientX - drag) * 0.004; drag = e.clientX; }
   });
   canvas.addEventListener("pointerleave", () => pointer.set(9, 9));
-  let drag = null, dragDist = 0, downX = 0;
-  canvas.addEventListener("pointerdown", (e) => { drag = e.clientX; downX = e.clientX; dragDist = 0; });
-  addEventListener("pointerup", (e) => {
-    if (drag === null) return;
-    dragDist = Math.abs(e.clientX - downX); drag = null;
-    if (dragDist < 6 && hovered >= 0) onPick?.(hovered);
-  });
-
-  function focus(i) {   // turn the ring so card i comes to the front (angle 0 faces the camera)
-    const a = cards[i].userData.angle, cur = spin;
-    let goal = -a; goal += Math.round((cur - goal) / (Math.PI * 2)) * Math.PI * 2;
-    target = goal;
-  }
+  canvas.addEventListener("pointerdown", (e) => { drag = e.clientX; downX = e.clientX; });
+  addEventListener("pointerup", (e) => { if (drag === null) return; drag = null; if (Math.abs(e.clientX - downX) < 6 && hovered >= 0) onPick?.(hovered); });
+  canvas.addEventListener("wheel", (e) => { spin += e.deltaY * 0.0012; }, { passive: true });
 
   let last = performance.now(), running = true;
   function frame(now) {
     if (!running) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    const t = reduceMotion ? 0 : now / 1000;
-    uniforms.uTime.value = t;
-    if (started) intro = Math.min(1, intro + dt / 4.2);   // held on the face until the visitor enters
-    const e = 1 - Math.pow(1 - intro, 3);
+    const t = now / 1000;
+    uniforms.uTime.value = t; finish.uniforms.uTime.value = t % 100;
+    mixers.forEach((m) => m.update(dt));
+    if (headBone) headBone.getWorldPosition(head);
 
-    if (target !== null) { spin += (target - spin) * Math.min(1, dt * 3); if (Math.abs(target - spin) < 0.002) target = null; }
-    else if (!drag && !reduceMotion) spin += spinVel * dt;
-    ring.rotation.y = spin;
+    // intro timeline: hold on the face, glitch, swoop out to the wide shot
+    const k = started ? (reduceMotion ? 99 : (now - t0) / 1000) : 0;
+    let shift = 0;
+    if (k < T_HOLD) {
+      camera.position.set(Math.sin(t * 0.4) * 0.05, head.y - 0.02, head.z + 1.15 - k * 0.06);
+      camera.lookAt(head);
+    } else if (k < T_HOLD + T_GLITCH) {
+      const g = (k - T_HOLD) / T_GLITCH;
+      shift = 0.012 + 0.03 * Math.abs(Math.sin(g * 40.0)) * (1 - g);                  // stuttering RGB split
+      camera.position.set((Math.random() - 0.5) * 0.04, head.y - 0.02 + (Math.random() - 0.5) * 0.03, head.z + 1.0);
+      camera.lookAt(head);
+      eyes.forEach((m, i) => m.color.setHSL((t * 3 + i * 0.3) % 1, 1, 0.5).multiplyScalar(4));   // the eyes cycle through colours
+    } else {
+      const s = Math.min(1, (k - T_HOLD - T_GLITCH) / T_SWOOP), e = ease(s);
+      eyes.forEach((m) => m.color.setRGB(4, 4, 4));
+      swoop.points[0].set(0, head.y, head.z + 1.0);
+      swoop.getPointAt(e, camera.position);
+      look.lerpVectors(head, wide.look, ease(Math.min(1, s * 1.15)));
+      if (s >= 1) { camera.position.x += par.x * 1.2; camera.position.y += par.y * 0.6; }   // settled: sway with the pointer
+      camera.lookAt(look);
+      shift = 0.0015 * (1 - e);
+    }
+    finish.uniforms.uShift.value = shift;
 
-    camera.position.lerpVectors(camFrom.pos, camTo.pos, e);
-    camera.position.x += par.x * 0.6 * e; camera.position.y += par.y * 0.3 * e;
-    look.lerpVectors(camFrom.look, camTo.look, e);
-    camera.lookAt(look);
-
-    // hover picking (only after the intro, once the cards are in view)
+    // the ring of cards
+    if (drag === null && !reduceMotion) spin += spinVel * dt;
+    spinner.rotation.y = spin;
     let hit = -1;
-    if (intro > 0.8 && pointer.x < 2) {
+    if (k > T_HOLD + T_GLITCH + T_SWOOP * 0.8 && pointer.x < 2) {
       ray.setFromCamera(pointer, camera);
       const h = ray.intersectObjects(cards, false)[0];
-      if (h && h.face && h.object.userData) {
-        const front = h.face.normal.clone().transformDirection(h.object.matrixWorld).dot(ray.ray.direction) < 0;
-        if (front) hit = h.object.userData.index;
-      }
+      if (h) hit = h.object.userData.index;
     }
-    canvas.style.cursor = hit >= 0 ? "pointer" : "grab";
-    const want = hit >= 0 ? hit : listHover;           // a hovered row in the cases list lights its card too
-    if (want !== hovered) { hovered = want; if (hit >= 0 || listHover < 0) onHover?.(hit); }
-
+    canvas.style.cursor = hit >= 0 ? "pointer" : drag !== null ? "grabbing" : "grab";
+    if (hit !== hovered) { hovered = hit; onHover?.(hit); }
     cards.forEach((c) => {
       const u = c.userData; u.hover += ((u.index === hovered ? 1 : 0) - u.hover) * Math.min(1, dt * 8);
       c.material.uniforms.uHover.value = u.hover;
-      c.position.y = u.baseY + Math.sin(t * 0.8 + u.bob) * 0.08 + u.hover * 0.15;
-      c.scale.setScalar(1 + u.hover * 0.08);
+      c.position.y = Math.sin(t * 0.6 + u.index) * 0.35;
+      // each card turns toward the figure but keeps its own lean
+      c.parent.updateMatrixWorld(); c.lookAt(tmp.set(0, 0.5, 0)); c.rotateY(Math.PI); c.rotateZ(u.tilt);
+      c.scale.setScalar(1 + u.hover * 0.12);
     });
-
-    for (let i = 0; i < EMB; i++) {
-      const s = embSeed[i], y = (s[1] + t * s[3]) % 6;
-      embPos[i * 3] = s[0] + Math.sin(t * 0.5 + i) * 0.2; embPos[i * 3 + 1] = y; embPos[i * 3 + 2] = s[2];
-    }
-    embGeo.attributes.position.needsUpdate = true;
-    figure.position.y = FH / 2 - 0.05 + Math.sin(t * 0.9) * 0.015;        // breathing
-
-    renderer.render(scene, camera);
+    dustPts.rotation.y = t * 0.01;
+    composer.render();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
   return {
-    resize, focus,
-    begin() { started = true; },
-    hover(i) { listHover = i; if (i >= 0) focus(i); },
-    spinBy(v) { spin += v; target = null; },
+    resize,
+    begin() { if (!started) { started = true; t0 = performance.now(); } },
     pause() { running = false; },
     resume() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } },
   };

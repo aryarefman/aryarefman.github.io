@@ -398,8 +398,13 @@ main, .foot { position: relative; z-index: 1; }
 .season-copy .kicker { font-weight: 600; }
 
 /* quick view (?lite): no WebGL, no loader, no pinned scenes; the content reads top to bottom */
-.enter-lite { font-size: 13px; text-align: center; color: var(--muted); text-decoration: none; border-bottom: 1px dashed transparent; transition: color 0.2s; }
-.enter-lite:hover { color: var(--ink); }
+/* the two alternative ways in: small pills in the same family as the enter buttons */
+.enter-alt { display: flex; gap: 8px; justify-content: center; }
+.enter-lite { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--muted); text-decoration: none;
+  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s; }
+.enter-lite svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.enter-lite:hover { color: var(--ink); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+.enter-lite.to-paper:hover { color: #1d1814; background: #e7e0d1; border-color: #e7e0d1; }
 .lite-switch { display: none; }
 html.lite .loader, html.lite .archipelago, html.lite canvas.stage, html.lite .season-band, html.lite .rail, html.lite .scene-chip,
 html.lite .dive-play, html.lite .cursor, html.lite .scroll-hint, html.lite .hero-outro, html.lite .hero-scrim, html.lite .stage-wrap { display: none !important; }

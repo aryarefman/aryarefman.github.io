@@ -7,202 +7,185 @@
 <meta name="description" content="IT student at ITS Surabaya building systems that see, defend and decide. Paper mode of the portfolio." />
 <meta property="og:title" content="Arya Bisma Putra Refman" />
 <meta property="og:image" content="https://aryarefman.github.io/img/og.png" />
-<meta name="theme-color" content="#e7e0d1" />
+<meta name="theme-color" content="#000000" />
 <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=Chakra+Petch:wght@500;600;700&family=Noto+Sans+Javanese:wght@700&family=Permanent+Marker&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/paper.css" />
 <script type="importmap">
   { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }
 </script>
 </head>
 <body class="loading">
-<!-- paper grain over everything -->
-<svg class="grain" aria-hidden="true"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0.55 0"/></filter><rect width="100%" height="100%" filter="url(#grain)"/></svg>
+<svg class="grain-defs" aria-hidden="true" width="0" height="0"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.3  0 0 0 0 0.24  0 0 0 0 0.18  0 0 0 0.6 0"/></filter></svg>
 
-<!-- loader: two torn halves of paper, opened in stop-motion once ready -->
-<div class="loader" role="dialog" aria-label="Loading">
-  <div class="tear tear-l" data-torn="right"></div>
-  <div class="tear tear-r" data-torn="left"></div>
+<!-- sound gate: plain paper, two round buttons; the paper tears open onto the scene -->
+<div class="loader" role="dialog" aria-label="Enter the site">
+  <div class="tear tear-l paper" data-torn="right-s"></div>
+  <div class="tear tear-r paper" data-torn="left-s"></div>
   <div class="loader-mid">
-    <p class="mono loader-count"><span>000</span></p>
     <div class="loader-btns">
       <button type="button" class="ring-btn" data-sound="on" aria-label="Enter with sound"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none"/></svg></button>
       <button type="button" class="ring-btn" data-sound="off" aria-label="Enter without sound"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none"/></svg></button>
     </div>
-    <p class="mono tiny">CLICK TO ENTER · WITH OR WITHOUT SOUND</p>
+    <p class="ui">Click to enable sound</p>
+    <p class="ui loader-pct">0%</p>
   </div>
 </div>
 
-<header class="bar bar-top" data-torn="bottom">
-  <a class="logo" href="#top" aria-label="Back to top"><span class="stamp">AR</span><span class="mono">arya.refman</span></a>
-  <nav class="mono" aria-label="Sections">
-    <a href="#cases" class="jitter">Cases</a>
-    <a href="#about" class="jitter">About</a>
-    <a href="#contact" class="jitter">Contact</a>
-  </nav>
-  <div class="bar-actions">
-    <button type="button" class="chip mono jitter sound-btn" aria-pressed="false">Sound <i>off</i></button>
-    <a class="chip chip-red mono jitter to-dive" href="./">Dive mode ↘</a>
+<!-- the 3D scene fills the screen; torn paper hems it in on the left and right -->
+<canvas class="portal" aria-label="3D scene: a figure on a glowing red dome with eight project cards orbiting. Click a card for details."></canvas>
+<div class="edge edge-l paper" data-torn="right" aria-hidden="true"></div>
+<div class="edge edge-r paper" data-torn="left" aria-hidden="true"></div>
+
+<!-- interface: small, in the corners -->
+<nav class="ui menu" aria-label="Pages">
+  <a href="#cases" data-page="cases" class="sm">Cases</a>
+  <a href="#about" data-page="about" class="sm">About</a>
+  <a href="#contact" data-page="contact" class="sm">Contact</a>
+  <a href="./" class="sm to-dive">Dive mode ↘</a>
+</nav>
+<a class="logo" href="#" data-page="home" aria-label="Arya, home"><span class="r">ꦄ</span>ꦂꦪ</a>
+<button type="button" class="ui sound-btn sm" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none"/></svg>Sound</button>
+<h1 class="brush" aria-label="Creative Engineer"><span>Creative</span><span>Engineer</span></h1>
+<p class="vertical" lang="id"><span>Kode, visi dan keamanan</span><span>untuk <b>keputusan cepat</b></span></p>
+<p class="ui corner corner-l">From Surabaya to the world</p>
+<p class="ui corner corner-r">WIB <time class="clock">--:--</time></p>
+<div class="tip ui" aria-hidden="true"><span class="tip-name"></span><span>Click for details</span></div>
+
+<!-- pages: paper sheets that cover the scene, opened with a stop-motion paper transition -->
+<section class="page paper" id="cases" data-torn="lr" aria-label="Cases" hidden>
+  <header class="page-head">
+    <h2 class="brush-h">Cases <sup class="ui">(08)</sup></h2>
+    <a href="#" data-page="home" class="ui sm close">← Back</a>
+  </header>
+  <ol class="cases">
+    <li class="case" data-i="0">
+      <img src="img/projects/jagapadi.jpg" alt="Jagapadi on a laptop and phone" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>Jagapadi</b><span>-</span><span>2026</span></p>
+        <p class="case-desc">Rice fields watched from orbit: Sentinel-1/2 and weather ensembles feed a water-balance model, with plain-language verdicts and Telegram alerts for farmers.</p>
+        <ul class="tags ui"><li>FastAPI</li><li>Sentinel-1/2</li><li>UM Metro Hackathon</li></ul>
+      </div>
+    </li>
+    <li class="case" data-i="1">
+      <img src="img/projects/algoverse.jpg" alt="AlgoVerse with a floating 3D binary tree" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>AlgoVerse</b><span>-</span><span>2026</span><em class="ui">2nd place</em></p>
+        <p class="case-desc">Data structures and algorithms as 3D objects in Augmented Reality, right in the phone browser.</p>
+        <ul class="tags ui"><li>WebAR</li><li>Three.js</li><li>IT Fest UB</li></ul>
+        <p class="case-links ui"><a href="https://semoga-kami-beruntung.vercel.app/">Live ↗</a><a href="https://github.com/MFaqihRidh0/Semoga-Kami-Beruntung">Repo ↗</a></p>
+      </div>
+    </li>
+    <li class="case" data-i="2">
+      <img src="img/projects/aromasys.jpg" alt="AromaSys on a laptop" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>AromaSys</b><span>-</span><span>2026</span><em class="ui">2nd place</em></p>
+        <p class="case-desc">Warehouse intelligence: digital-twin floor plan, cold-chain telemetry, vision QC and a Gemini operations copilot. Lead developer.</p>
+        <ul class="tags ui"><li>Next.js</li><li>PostgreSQL</li><li>Cyberhack</li></ul>
+        <p class="case-links ui"><a href="https://cyberhack-digendong-bokem.vercel.app/">Live ↗</a><a href="https://github.com/aryarefman/cyberhack-digendong-bokem">Repo ↗</a></p>
+      </div>
+    </li>
+    <li class="case" data-i="3">
+      <img src="img/projects/siews.jpg" alt="SIEWS+ PPE detection" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>SIEWS+ 5.0</b><span>-</span><span>2026</span><em class="ui">Finalist</em></p>
+        <p class="case-desc">YOLOv8 on live RTSP streams checks PPE and red-zone breaches in under 50 ms per frame, with fail-safe shutdown and alerts.</p>
+        <ul class="tags ui"><li>YOLOv8</li><li>OpenCV</li><li>Hulu Migas</li></ul>
+        <p class="case-links ui"><a href="https://github.com/aryarefman/migas-siews">Repo ↗</a></p>
+      </div>
+    </li>
+    <li class="case" data-i="4">
+      <img src="img/projects/helaloka.jpg" alt="HELALOKA smoke-dispersion map" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>HELALOKA</b><span>-</span><span>2026</span><em class="ui">Rank 14</em></p>
+        <p class="case-desc">A Lagrangian particle engine for volcanic ash and wildfire smoke across Indonesia, with impact ranges and routes to safe hospitals.</p>
+        <ul class="tags ui"><li>JavaScript</li><li>NASA FIRMS</li><li>JOINTS UGM</li></ul>
+        <p class="case-links ui"><a href="https://helaloka.up.railway.app/">Live ↗</a><a href="https://github.com/nyarikerja/JOINTS2026">Repo ↗</a></p>
+      </div>
+    </li>
+    <li class="case" data-i="5">
+      <img src="img/projects/narpati.jpg" alt="Narpati Quest gameplay" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>Narpati Quest</b><span>-</span><span>2026</span></p>
+        <p class="case-desc">A Mahabharata adventure in Javanese wayang, narrated by a "Dalang AI" game master grounded with retrieval.</p>
+        <ul class="tags ui"><li>Next.js</li><li>LLMs</li><li>RAG</li></ul>
+        <p class="case-links ui"><a href="https://web-sable-three-46.vercel.app">Play ↗</a></p>
+      </div>
+    </li>
+    <li class="case" data-i="6">
+      <img src="img/projects/soc.jpg" alt="SOC-SOAR workflow and alerts" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>SOC-SOAR</b><span>-</span><span>2025</span></p>
+        <p class="case-desc">Wazuh detects SYN floods, an active response drops the attacker, Shuffle files Jira and Telegram. Under 4 s, no human in the loop.</p>
+        <ul class="tags ui"><li>Wazuh</li><li>Shuffle</li><li>Bash</li></ul>
+        <p class="case-links ui"><a href="https://github.com/aryarefman/soc-soar">Repo ↗</a></p>
+      </div>
+    </li>
+    <li class="case" data-i="7">
+      <img src="img/projects/skyopt.jpg" alt="Sky Optimizers 3D animation" loading="lazy" />
+      <div class="case-card">
+        <p class="case-row"><b>Sky Optimizers</b><span>-</span><span>2025</span></p>
+        <p class="case-desc">PSO and the Grey Wolf Optimizer search the same landscape step by step on floating islands.</p>
+        <ul class="tags ui"><li>Three.js</li><li>Metaheuristics</li></ul>
+        <p class="case-links ui"><a href="https://aryarefman.github.io/metaheuristik-pso-gwo/">Live ↗</a><a href="https://github.com/aryarefman/metaheuristik-pso-gwo">Repo ↗</a></p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section class="page paper" id="about" data-torn="lr" aria-label="About" hidden>
+  <header class="page-head">
+    <h2 class="brush-h">About</h2>
+    <a href="#" data-page="home" class="ui sm close">← Back</a>
+  </header>
+  <div class="about">
+    <figure class="polaroid"><img src="img/arya-city.webp" alt="Arya at a balcony railing in the city at night" width="1100" height="779" /><figcaption class="ui">Surabaya · 2026</figcaption></figure>
+    <div>
+      <p class="lede">I'm Arya, an IT student at ITS Surabaya (GPA 3.95). I build for people who have to decide fast: farmers watching for drought, towns in the path of volcanic ash, refinery crews near red zones, SOC teams facing a flood of packets.</p>
+      <p>Systems that <b class="r">see</b> what is happening, <b class="r">defend</b> what matters, and help people <b class="r">decide</b>. Now: AI NLP backend at Hamilku.ID, LLM agent security and JEPA world models.</p>
+      <div class="cols">
+        <div><h3 class="ui r">Awards</h3><ul class="list">
+          <li><b>2nd</b> AlgoVerse <span class="ui">IT Fest 2026 · UB</span></li>
+          <li><b>2nd</b> AromaSys <span class="ui">Cyberhack · Xtremax × UCS ITS</span></li>
+          <li><b>Final</b> SIEWS+ 5.0 <span class="ui">Hulu Migas 2026</span></li>
+          <li><b>Final</b> Global AQI analysis <span class="ui">IMILKOM · USU</span></li>
+          <li><b>#14</b> HELALOKA <span class="ui">JOINTS UGM 2026</span></li></ul></div>
+        <div><h3 class="ui r">Experience</h3><ul class="list">
+          <li><b>AI NLP Backend Specialist</b> <span class="ui">Hamilku.ID · 2026–</span></li>
+          <li><b>Head of IT Dev Division</b> <span class="ui">ARA 8.0 · ITS</span></li>
+          <li><b>Head of Backend</b> <span class="ui">IBL 2K26 · ITS</span></li>
+          <li><b>AI Engineer · 3D Printing</b> <span class="ui">Admin Lab KCKS</span></li>
+          <li><b>Head Teaching Assistant</b> <span class="ui">Data Structures &amp; OOP</span></li></ul></div>
+        <div><h3 class="ui r">Writing</h3><ul class="list">
+          <li><a href="https://github.com/aryarefman/paper"><b>Least-privilege guardrails</b></a> <span class="ui">Multilingual LLM agents</span></li>
+          <li><a href="https://github.com/aryarefman/penulisan-ilmiah"><b>JEPA vs generative world models</b></a> <span class="ui">2,812 → 42 studies</span></li>
+          <li><a href="https://github.com/aryarefman/soka-peft-heuristik"><b>PEFT cloud scheduler</b></a> <span class="ui">~15% lower makespan</span></li></ul></div>
+      </div>
+    </div>
   </div>
-</header>
+</section>
 
-<main id="top">
-  <!-- HERO: a window torn into the paper, the 3D scene behind it -->
-  <section class="hero" aria-label="Introduction">
-    <canvas class="portal" aria-label="3D scene: Arya standing in a red-lit void with eight project cards orbiting around him. Click a card to open the project."></canvas>
-    <div class="side side-l" data-torn="right">
-      <p class="mono vert">PORTFOLIO 2026 · VOL.02 · PAPER</p>
-    </div>
-    <div class="side side-r" data-torn="left">
-      <p class="vert-up red" lang="id">LIHAT · JAGA · PUTUSKAN</p>
-    </div>
-    <div class="hero-copy">
-      <p class="mono tiny cream">IT STUDENT · ITS SURABAYA · INDONESIA</p>
-      <h1 class="title"><span class="morph">Arya</span><span class="morph">Refman</span></h1>
-      <p class="hero-role">Systems that <em class="red">see</em>, <em class="red">defend</em> and <em class="red">decide</em>.</p>
-    </div>
-    <p class="mono tiny cream card-label" aria-live="polite"></p>
-    <div class="bar bar-bottom mono" data-torn="top">
-      <span>FROM SURABAYA TO THE WORLD</span>
-      <span class="hint">DRAG TO SPIN · CLICK A CARD</span>
-      <span>WIB <time class="clock">--:--</time></span>
-    </div>
-  </section>
+<section class="page paper" id="contact" data-torn="lr" aria-label="Contact" hidden>
+  <header class="page-head">
+    <h2 class="brush-h">Contact</h2>
+    <a href="#" data-page="home" class="ui sm close">← Back</a>
+  </header>
+  <p class="big-brush">Let's build <span class="r">something.</span></p>
+  <p class="ui">Open to research collaboration, internships and hackathon teams</p>
+  <p class="contact-links">
+    <a class="sm pill pill-red" href="mailto:arya445refman@gmail.com">Email ↗</a>
+    <a class="sm pill" href="cv/Arya-Bisma-Putra-Refman-CV.pdf" download>CV ↓</a>
+    <a class="sm pill" href="https://www.linkedin.com/in/aryarefman">LinkedIn ↗</a>
+    <a class="sm pill" href="https://github.com/aryarefman">GitHub ↗</a>
+  </p>
+  <p class="ui credit">3D figure: Xbot (Mixamo, via the three.js examples) · <a href="https://github.com/aryarefman/aryarefman.github.io">source</a></p>
+</section>
 
-  <!-- CASES -->
-  <section id="cases" class="sheet" data-torn="both">
-    <header class="sheet-head reveal">
-      <h2 class="title">Cases <sup class="mono">(08)</sup></h2>
-      <p class="mono tiny">HACKATHONS, RESEARCH AND THINGS THAT SHIPPED · 2025–2026</p>
-    </header>
-    <ol class="cases">
-      <li class="case reveal" data-i="0">
-        <img src="img/projects/jagapadi.jpg" alt="Jagapadi landing page on a laptop and phone" loading="lazy" />
-        <div class="case-row"><h3>Jagapadi</h3><span class="mono">— 2026</span></div>
-        <p>Rice fields, watched from orbit. Sentinel-1 radar and Sentinel-2 imagery plus weather ensembles feed a water-balance model; farmers get plain-language verdicts and Telegram alerts.</p>
-        <ul class="tags mono"><li>FastAPI</li><li>React</li><li>Sentinel-1/2</li><li>UM Metro Hackathon</li></ul>
-        <p class="links mono"><span class="muted">Repository private during judging</span></p>
-      </li>
-      <li class="case reveal" data-i="1">
-        <img src="img/projects/algoverse.jpg" alt="AlgoVerse landing page with a floating 3D binary tree" loading="lazy" />
-        <div class="case-row"><h3>AlgoVerse</h3><span class="mono">— 2026</span><span class="award mono">2nd place</span></div>
-        <p>Data structures and algorithms as interactive 3D objects in Augmented Reality, straight from a phone browser: 7 structures, 8 algorithms, step-by-step playback.</p>
-        <ul class="tags mono"><li>WebAR</li><li>Three.js</li><li>IT Fest UB</li></ul>
-        <p class="links mono"><a href="https://semoga-kami-beruntung.vercel.app/" class="jitter">Live ↗</a><a href="https://github.com/MFaqihRidh0/Semoga-Kami-Beruntung" class="jitter">Repo ↗</a></p>
-      </li>
-      <li class="case reveal" data-i="2">
-        <img src="img/projects/aromasys.jpg" alt="AromaSys landing page on a laptop" loading="lazy" />
-        <div class="case-row"><h3>AromaSys</h3><span class="mono">— 2026</span><span class="award mono">2nd place</span></div>
-        <p>Warehouse intelligence: a digital-twin floor plan with cold-chain telemetry, vision quality control and a Gemini operations copilot. Lead developer.</p>
-        <ul class="tags mono"><li>Next.js</li><li>Express</li><li>PostgreSQL</li><li>Cyberhack</li></ul>
-        <p class="links mono"><a href="https://cyberhack-digendong-bokem.vercel.app/" class="jitter">Live ↗</a><a href="https://github.com/aryarefman/cyberhack-digendong-bokem" class="jitter">Repo ↗</a></p>
-      </li>
-      <li class="case reveal" data-i="3">
-        <img src="img/projects/siews.jpg" alt="SIEWS+ detection of helmets and safety vests" loading="lazy" />
-        <div class="case-row"><h3>SIEWS+ 5.0</h3><span class="mono">— 2026</span><span class="award mono">Finalist</span></div>
-        <p>YOLOv8 on live RTSP streams checks PPE and red-zone breaches in under 50 ms per frame, triggers fail-safe shutdown and alerts over WebSocket and WhatsApp.</p>
-        <ul class="tags mono"><li>Python</li><li>YOLOv8</li><li>OpenCV</li><li>Hulu Migas</li></ul>
-        <p class="links mono"><a href="https://github.com/aryarefman/migas-siews" class="jitter">Repo ↗</a></p>
-      </li>
-      <li class="case reveal" data-i="4">
-        <img src="img/projects/helaloka.jpg" alt="HELALOKA landing page and smoke-dispersion map" loading="lazy" />
-        <div class="case-row"><h3>HELALOKA</h3><span class="mono">— 2026</span><span class="award mono">Rank 14</span></div>
-        <p>One Lagrangian particle engine simulates volcanic ash and wildfire smoke across Indonesia, with P5/P50/P95 impact ranges and routes to hospitals outside the plume.</p>
-        <ul class="tags mono"><li>JavaScript</li><li>Python</li><li>NASA FIRMS</li><li>JOINTS UGM</li></ul>
-        <p class="links mono"><a href="https://helaloka.up.railway.app/" class="jitter">Live ↗</a><a href="https://github.com/nyarikerja/JOINTS2026" class="jitter">Repo ↗</a></p>
-      </li>
-      <li class="case reveal" data-i="5">
-        <img src="img/projects/narpati.jpg" alt="Narpati Quest landing page and gameplay screen" loading="lazy" />
-        <div class="case-row"><h3>Narpati Quest</h3><span class="mono">— 2026</span></div>
-        <p>A Mahabharata adventure in the world of Javanese wayang, narrated by a "Dalang AI" game master across several LLM providers, grounded with retrieval.</p>
-        <ul class="tags mono"><li>TypeScript</li><li>Next.js</li><li>LLMs</li><li>RAG</li></ul>
-        <p class="links mono"><a href="https://web-sable-three-46.vercel.app" class="jitter">Play ↗</a></p>
-      </li>
-      <li class="case reveal" data-i="6">
-        <img src="img/projects/soc.jpg" alt="SOC-SOAR workflow and Telegram auto-block alerts" loading="lazy" />
-        <div class="case-row"><h3>SOC-SOAR</h3><span class="mono">— 2025</span></div>
-        <p>Wazuh decoders spot SYN-flood state exhaustion, an active response drops the attacker, and Shuffle files a Jira ticket and posts to Telegram. Under 4 seconds, no human in the loop.</p>
-        <ul class="tags mono"><li>Wazuh</li><li>Shuffle</li><li>Jira API</li><li>Bash</li></ul>
-        <p class="links mono"><a href="https://github.com/aryarefman/soc-soar" class="jitter">Repo ↗</a></p>
-      </li>
-      <li class="case reveal" data-i="7">
-        <img src="img/projects/skyopt.jpg" alt="Sky Optimizers 3D teaching animation" loading="lazy" />
-        <div class="case-row"><h3>Sky Optimizers</h3><span class="mono">— 2025</span></div>
-        <p>Particle Swarm Optimization and the Grey Wolf Optimizer search the same landscape step by step on floating islands, with a narrated explainer.</p>
-        <ul class="tags mono"><li>Three.js</li><li>Metaheuristics</li></ul>
-        <p class="links mono"><a href="https://aryarefman.github.io/metaheuristik-pso-gwo/" class="jitter">Live ↗</a><a href="https://github.com/aryarefman/metaheuristik-pso-gwo" class="jitter">Repo ↗</a></p>
-      </li>
-    </ol>
-  </section>
-
-  <!-- ABOUT -->
-  <section id="about" class="sheet sheet-alt" data-torn="both">
-    <div class="about">
-      <div class="about-side reveal">
-        <p class="vert-up red" lang="id">ARYA · SURABAYA</p>
-        <img src="img/arya-city.webp" alt="Arya at a glass balcony railing in the city at night" loading="lazy" width="1100" height="779" />
-      </div>
-      <div class="about-main">
-        <header class="sheet-head reveal">
-          <h2 class="title">About</h2>
-          <p class="mono tiny">IT · ITS SURABAYA · GPA 3.95 / 4.00</p>
-        </header>
-        <p class="lede reveal">I build for people who have to decide fast: farmers watching for drought, towns in the path of volcanic ash, refinery crews near red zones, students learning algorithms, and SOC teams facing a flood of packets.</p>
-        <p class="reveal">I like closing the loop: systems that <em class="red">see</em> what is happening, <em class="red">defend</em> what matters, and help people <em class="red">decide</em> what to do next. Now: AI NLP backend at Hamilku.ID, LLM agent security, and JEPA world models.</p>
-
-        <div class="cols">
-          <div class="reveal">
-            <h3 class="mono tiny red">Awards</h3>
-            <ul class="list">
-              <li><b>2nd</b> AlgoVerse <span class="mono">IT Fest 2026 · UB</span></li>
-              <li><b>2nd</b> AromaSys <span class="mono">Cyberhack · Xtremax × UCS ITS</span></li>
-              <li><b>Final</b> SIEWS+ 5.0 <span class="mono">Hulu Migas 2026 · SKK Migas</span></li>
-              <li><b>Final</b> Global AQI analysis <span class="mono">IMILKOM · USU</span></li>
-              <li><b>#14</b> HELALOKA <span class="mono">JOINTS UGM 2026</span></li>
-            </ul>
-          </div>
-          <div class="reveal">
-            <h3 class="mono tiny red">Experience</h3>
-            <ul class="list">
-              <li><b>AI NLP Backend Specialist</b> <span class="mono">Hamilku.ID · 2026–</span></li>
-              <li><b>Head of IT Dev Division</b> <span class="mono">ARA 8.0 · ITS · 2026–</span></li>
-              <li><b>Head of Backend</b> <span class="mono">IBL 2K26 · ITS · 2026–</span></li>
-              <li><b>AI Engineer · PIC 3D Printing</b> <span class="mono">Admin Lab KCKS · 2025–</span></li>
-              <li><b>Head Teaching Assistant</b> <span class="mono">Data Structures &amp; OOP</span></li>
-            </ul>
-          </div>
-          <div class="reveal">
-            <h3 class="mono tiny red">Writing</h3>
-            <ul class="list">
-              <li><a href="https://github.com/aryarefman/paper" class="jitter"><b>Least-privilege guardrails</b></a> <span class="mono">multilingual LLM agents</span></li>
-              <li><a href="https://github.com/aryarefman/penulisan-ilmiah" class="jitter"><b>JEPA vs generative world models</b></a> <span class="mono">2,812 → 42 studies</span></li>
-              <li><a href="https://github.com/aryarefman/soka-peft-heuristik" class="jitter"><b>PEFT cloud scheduler</b></a> <span class="mono">~15% lower makespan</span></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CONTACT -->
-  <section id="contact" class="sheet sheet-dark" data-torn="top">
-    <h2 class="title big reveal">Let's build<br /><span class="red">something.</span></h2>
-    <p class="mono tiny reveal">OPEN TO RESEARCH COLLABORATION, INTERNSHIPS AND HACKATHON TEAMS</p>
-    <p class="contact-links mono reveal">
-      <a href="mailto:arya445refman@gmail.com" class="chip chip-red jitter">Email ↗</a>
-      <a href="cv/Arya-Bisma-Putra-Refman-CV.pdf" class="chip jitter" download>CV ↓</a>
-      <a href="https://www.linkedin.com/in/aryarefman" class="chip jitter">LinkedIn ↗</a>
-      <a href="https://github.com/aryarefman" class="chip jitter">GitHub ↗</a>
-    </p>
-    <footer class="mono tiny foot">
-      <span>© 2026 Arya Bisma Putra Refman</span>
-      <span><a href="./" class="to-dive">Dive mode</a> · <a href="https://github.com/aryarefman/aryarefman.github.io">source</a></span>
-    </footer>
-  </section>
-</main>
+<!-- stop-motion paper transition between pages -->
+<div class="swap" aria-hidden="true"><div class="swap-l paper" data-torn="right-s"></div><div class="swap-r paper" data-torn="left-s"></div></div>
 
 <script type="module" src="js/paper.js"></script>
 </body>

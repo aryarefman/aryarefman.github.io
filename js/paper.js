@@ -1,53 +1,55 @@
-// Paper mode: torn-paper layout, stop-motion movement, the red-lit 3D window, small paper sounds,
-// and a burning-paper exit back to the dive mode.
-import Lenis from "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs";
+// Paper mode: the sound gate, the corner interface, pages that swap behind stop-motion paper, small paper
+// sounds, and a burning-paper exit back to the dive mode.
 import { createPaperScene } from "./paper-scene.js";
 import { burnPage } from "./burn.js";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const lenis = reduceMotion ? null : new Lenis({ lerp: 0.09, smoothWheel: true, anchors: { offset: -70 } });
-if (lenis) { lenis.stop(); requestAnimationFrame(function raf(t) { lenis.raf(t); requestAnimationFrame(raf); }); }
 
 // ---------- torn edges: a jagged clip-path polygon for each [data-torn] element ----------
+// "right"/"left" tear one long side deeply and unevenly (the screen hems); "right-s"/"left-s" tear it shallowly
+// (halves that must meet and cover the screen); "lr" tears both sides lightly (pages)
 function seeded(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
-function tornPolygon(w, h, sides, seed) {
-  const rnd = seeded(seed), A = 14, pts = [];
-  // a wandering offset plus fine fibres: low-frequency wobble from a few summed sines, jitter on top
-  const ph = [rnd() * 6, rnd() * 6, rnd() * 6];
-  const off = (t) => A * (0.55 + 0.25 * Math.sin(t * 0.011 + ph[0]) + 0.15 * Math.sin(t * 0.037 + ph[1]) + 0.05 * Math.sin(t * 0.09 + ph[2])) + rnd() * 3.5;
-  const edge = (from, to, inward, len) => {
-    for (let t = 0; t <= len; t += 5 + rnd() * 7) {
-      const k = t / len, o = off(t + from[0] + from[1]);
-      pts.push([from[0] + (to[0] - from[0]) * k + inward[0] * o, from[1] + (to[1] - from[1]) * k + inward[1] * o]);
-    }
+function tornPolygon(w, h, mode, seed) {
+  const rnd = seeded(seed), ph = [rnd() * 6, rnd() * 6, rnd() * 6, rnd() * 6], pts = [];
+  // depth of the tear at height y (as a fraction of the strip width): narrow near the top, a big bite lower down
+  const deep = (y) => {
+    const k = y / h;
+    return 0.22 + 0.32 * Math.sin(k * 2.6 + ph[0]) ** 2 + 0.16 * Math.sin(k * 7.3 + ph[1]) + 0.05 * Math.sin(k * 23 + ph[2]) - 0.18 * Math.exp(-k * 9);
   };
-  if (sides.includes("top")) edge([0, 0], [w, 0], [0, 1], w); else pts.push([0, 0], [w, 0]);
-  if (sides.includes("right")) edge([w, 0], [w, h], [-1, 0], h); else pts.push([w, h]);
-  if (sides.includes("bottom")) edge([w, h], [0, h], [0, -1], w); else pts.push([0, h]);
-  if (sides.includes("left")) edge([0, h], [0, 0], [1, 0], h);
+  const fibre = () => (rnd() - 0.5) * 6;
+  const shallow = mode.endsWith("-s"); mode = mode.replace("-s", "");
+  if (mode === "right" || mode === "left") {
+    const edgeX = shallow ? (y) => w - 10 - 14 * (0.5 + 0.5 * Math.sin(y * 0.013 + ph[0])) + fibre() : (y) => Math.max(4, Math.min(w - 2, w * deep(y) + fibre()));
+    const ys = []; for (let y = 0; y <= h; y += 4 + rnd() * 7) ys.push(y); ys.push(h);
+    if (mode === "right") { pts.push([0, 0]); ys.forEach((y) => pts.push([edgeX(y), y])); pts.push([0, h]); }
+    else { pts.push([w, 0]); ys.forEach((y) => pts.push([w - edgeX(y), y])); pts.push([w, h]); }
+  } else {   // "lr": shallow tears on both long sides
+    const A = 16, off = (y, p) => A * (0.5 + 0.3 * Math.sin(y * 0.012 + p) + 0.2 * Math.sin(y * 0.041 + p * 2)) + fibre();
+    const ys = []; for (let y = 0; y <= h; y += 5 + rnd() * 8) ys.push(y); ys.push(h);
+    ys.forEach((y) => pts.push([off(y, ph[0]), y]));
+    ys.reverse().forEach((y) => pts.push([w - off(y, ph[3]), y]));
+  }
   return `polygon(${pts.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`).join(",")})`;
 }
 const tornEls = [...document.querySelectorAll("[data-torn]")];
 function tear() {
   tornEls.forEach((el, i) => {
-    const sides = el.dataset.torn === "both" ? "top bottom" : el.dataset.torn;
-    el.style.setProperty("--torn", tornPolygon(el.offsetWidth, el.offsetHeight, sides, 1000 + i * 77));
+    const r = el.getBoundingClientRect(), w = r.width || innerWidth, h = el.classList.contains("page") ? innerHeight : r.height || innerHeight;
+    el.style.setProperty("--torn", tornPolygon(w, h, el.dataset.torn, 1000 + i * 77));
   });
 }
 tear();
 let tearTimer = 0;
-addEventListener("resize", () => { clearTimeout(tearTimer); tearTimer = setTimeout(tear, 150); });
-new ResizeObserver(() => { clearTimeout(tearTimer); tearTimer = setTimeout(tear, 150); }).observe(document.body);
+addEventListener("resize", () => { clearTimeout(tearTimer); tearTimer = setTimeout(() => { tear(); scene?.resize(); }, 150); });
 
-// ---------- sound: paper rustles, a low warm drone, and crackling when the page burns ----------
-let ctx = null, master = null, droneGain = null, soundOn = false;
-function noiseBuf() { const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; }
-let nb = null;
+// ---------- sound: paper rustles, a low warm drone, crackle while burning ----------
+let ctx = null, master = null, droneGain = null, nb = null, soundOn = false;
 function startAudio() {
-  ctx = new (window.AudioContext || window.webkitAudioContext)(); nb = noiseBuf();
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  nb = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
-  droneGain = ctx.createGain(); droneGain.gain.value = 0.0; droneGain.connect(master);
-  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700; lp.connect(droneGain);
+  droneGain = ctx.createGain(); droneGain.gain.value = 0; droneGain.connect(master);
+  const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 650; lp.connect(droneGain);
   [73.42, 110, 146.83, 174.61].forEach((f, i) => {   // D2 A2 D3 F3: a low, warm minor chord for the red room
     const o = ctx.createOscillator(), g = ctx.createGain(), l = ctx.createOscillator(), lg = ctx.createGain();
     o.type = i % 2 ? "triangle" : "sine"; o.frequency.value = f; o.detune.value = (i - 1.5) * 5; g.gain.value = 0.06;
@@ -55,11 +57,12 @@ function startAudio() {
     o.connect(g).connect(lp); o.start();
   });
 }
+const soundBtn = document.querySelector(".sound-btn");
 function setSound(on) {
   soundOn = on;
   if (on && !ctx) startAudio();
   if (ctx) { ctx.resume(); master.gain.setTargetAtTime(on ? 0.7 : 0, ctx.currentTime, 0.4); droneGain.gain.setTargetAtTime(on ? 0.5 : 0, ctx.currentTime, 1.2); }
-  const b = document.querySelector(".sound-btn"); b.setAttribute("aria-pressed", String(on)); b.querySelector("i").textContent = on ? "on" : "off";
+  soundBtn.setAttribute("aria-pressed", String(on));
   try { localStorage.setItem("sound", on ? "on" : "off"); } catch {}
 }
 function rustle(level = 1, dur = 0.09) {   // a dry paper flick: band-passed noise with a fast decay
@@ -71,71 +74,78 @@ function rustle(level = 1, dur = 0.09) {   // a dry paper flick: band-passed noi
   s.connect(bp).connect(g).connect(master); s.start(t, Math.random() * 0.8); s.stop(t + dur + 0.02);
 }
 function crackle(seconds) { if (!soundOn) return; for (let i = 0; i < seconds * 40; i++) setTimeout(() => rustle(0.4 + Math.random() * 0.8, 0.03 + Math.random() * 0.05), Math.random() * seconds * 1000); }
-document.addEventListener("pointerenter", (e) => { if (e.target.closest?.(".jitter, .chip, .ring-btn, .case")) rustle(0.35, 0.05); }, true);
+document.addEventListener("pointerenter", (e) => { if (e.target.closest?.(".sm, .ring-btn, .case")) rustle(0.35, 0.05); }, true);
 document.addEventListener("click", (e) => { if (e.target.closest("a, button")) rustle(1, 0.12); }, true);
-document.querySelector(".sound-btn").addEventListener("click", () => setSound(!soundOn));
+soundBtn.addEventListener("click", () => setSound(!soundOn));
 
 // ---------- clock: Surabaya time ----------
 const clock = document.querySelector(".clock");
 const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
-function tick() { clock.textContent = fmt.format(new Date()); }
+const tick = () => (clock.textContent = fmt.format(new Date()));
 tick(); setInterval(tick, 10000);
 
-// ---------- title: letters flicker through random glyphs and settle left to right ----------
-function scramble(el, delay = 0) {
-  const final = el.textContent, glyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&*";
-  if (reduceMotion) return;
-  let frame = 0;
-  setTimeout(function step() {
-    frame++;
-    el.textContent = [...final].map((c, i) => (frame > 6 + i * 3 ? c : glyphs[(Math.random() * glyphs.length) | 0])).join("");
-    if (frame < 8 + final.length * 3) setTimeout(step, 55); else el.textContent = final;
-  }, delay);
+// ---------- pages: swap behind two sheets of paper that snap shut and open again ----------
+const pages = { cases: document.getElementById("cases"), about: document.getElementById("about"), contact: document.getElementById("contact") };
+const swap = document.querySelector(".swap");
+let current = "home", swapping = false;
+function show(name, after) {
+  name = pages[name] ? name : "home";
+  if (name === current || swapping) { after?.(); return; }
+  const apply = () => {
+    Object.entries(pages).forEach(([k, el]) => (el.hidden = k !== name));
+    current = name;
+    if (name === "home") scene?.resume(); else scene?.pause();   // the scene is covered: stop rendering it
+    tear();
+    after?.();
+  };
+  if (reduceMotion) { apply(); return; }
+  swapping = true; rustle(1, 0.2);
+  swap.className = "swap in";
+  setTimeout(() => {
+    apply();
+    swap.className = "swap out"; rustle(0.8, 0.18);
+    setTimeout(() => { swap.className = "swap"; swapping = false; }, 520);
+  }, 440);
 }
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-page]"); if (!a) return;
+  e.preventDefault();
+  const name = a.dataset.page;
+  history.pushState(null, "", name === "home" ? location.pathname : `#${name}`);
+  show(name);
+});
+addEventListener("popstate", () => show(location.hash.slice(1) || "home"));
+addEventListener("keydown", (e) => { if (e.key === "Escape" && current !== "home") { history.pushState(null, "", location.pathname); show("home"); } });
 
-// ---------- reveals ----------
-const revealer = new IntersectionObserver((entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); revealer.unobserve(en.target); } }), { threshold: 0.12 });
-document.querySelectorAll(".reveal").forEach((el) => revealer.observe(el));
-
-// ---------- the 3D window ----------
+// ---------- the scene, with a tooltip that follows the pointer over a card ----------
 const cases = [...document.querySelectorAll(".case")];
-const label = document.querySelector(".card-label");
-const names = cases.map((c) => c.querySelector("h3").textContent);
-const tags = cases.map((c) => c.querySelector(".award")?.textContent || c.querySelector(".tags li:last-child")?.textContent || "");
+const names = cases.map((c) => c.querySelector(".case-row b").textContent);
+const tip = document.querySelector(".tip"), tipName = tip.querySelector(".tip-name");
+addEventListener("pointermove", (e) => { tip.style.transform = `translate(${e.clientX + 16}px, ${e.clientY + 14}px)`; });
 let scene = null;
 try {
   scene = createPaperScene(document.querySelector(".portal"), {
     images: cases.map((c) => c.querySelector("img").getAttribute("src")),
     reduceMotion,
-    onHover(i) {
-      cases.forEach((c, k) => c.classList.toggle("lit", k === i));
-      label.innerHTML = i >= 0 ? `CASE ${String(i + 1).padStart(2, "0")} · ${tags[i]}<b>${names[i]}</b>` : "";
-    },
+    onHover(i) { tip.classList.toggle("on", i >= 0); if (i >= 0) { tipName.textContent = names[i]; rustle(0.3, 0.05); } },
     onPick(i) {
-      rustle(1, 0.15);
-      const el = cases[i];
-      if (lenis) lenis.scrollTo(el, { offset: -90 }); else el.scrollIntoView({ behavior: "smooth" });
-      el.classList.add("lit"); setTimeout(() => el.classList.remove("lit"), 1800);
+      tip.classList.remove("on");
+      history.pushState(null, "", "#cases");
+      show("cases", () => {
+        const el = cases[i]; el.scrollIntoView({ block: "center" });
+        el.classList.add("lit"); setTimeout(() => el.classList.remove("lit"), 2200);
+      });
     },
   });
-} catch (err) { console.warn("3D unavailable", err); document.querySelector(".hint").textContent = "SCROLL FOR CASES"; }
-cases.forEach((c, i) => {
-  c.addEventListener("mouseenter", () => scene?.hover(i));
-  c.addEventListener("mouseleave", () => scene?.hover(-1));
-});
-addEventListener("resize", () => scene?.resize());
-// render the window only while it is on screen
-const hero = document.querySelector(".hero");
-new IntersectionObserver(([en]) => { if (!scene) return; if (en.isIntersecting) scene.resume(); else scene.pause(); }).observe(hero);
-if (lenis) lenis.on("scroll", ({ velocity }) => { if (scene && scrollY < innerHeight) scene.spinBy(velocity * 0.0015); });
+} catch (err) { console.warn("3D unavailable", err); }
 
-// ---------- loader ----------
-const loader = document.querySelector(".loader"), count = loader.querySelector(".loader-count span");
-const t0 = performance.now(), minShow = reduceMotion ? 0 : 1500;
-(function countUp() {
-  const k = Math.min(1, (performance.now() - t0) / Math.max(1, minShow));
-  count.textContent = String(Math.round(k * 100)).padStart(3, "0");
-  if (k < 1) requestAnimationFrame(countUp);
+// ---------- the sound gate ----------
+const loader = document.querySelector(".loader"), pct = loader.querySelector(".loader-pct");
+const t0 = performance.now();
+(function count() {
+  const k = Math.min(1, (performance.now() - t0) / 1400);
+  pct.textContent = `${Math.round(k * 100)}%`;
+  if (k < 1) requestAnimationFrame(count);
 })();
 let entered = false;
 function enter(withSound) {
@@ -145,16 +155,13 @@ function enter(withSound) {
   loader.classList.add("done");
   setTimeout(() => loader.classList.add("gone"), 950);
   document.body.classList.remove("loading");
-  lenis?.start();
   scene?.begin();
-  document.querySelectorAll(".hero .morph").forEach((el, i) => scramble(el, 350 + i * 180));
+  const start = location.hash.slice(1);
+  if (pages[start]) setTimeout(() => show(start), 400);
 }
 loader.querySelectorAll("[data-sound]").forEach((b) => b.addEventListener("click", () => enter(b.dataset.sound === "on")));
-Promise.all([document.fonts.ready, new Promise((r) => setTimeout(r, minShow))]).then(() => {
-  loader.classList.add("ready");
-  let pref = null; try { pref = localStorage.getItem("sound"); } catch {}
-  loader.querySelector(`[data-sound="${pref === "on" ? "on" : "off"}"]`).focus({ preventScroll: true });
-});
+let pref = null; try { pref = localStorage.getItem("sound"); } catch {}
+loader.querySelector(`[data-sound="${pref === "on" ? "on" : "off"}"]`).focus({ preventScroll: true });
 
 // ---------- back to the dive: the page burns away from where you clicked ----------
 document.querySelectorAll(".to-dive").forEach((a) => a.addEventListener("click", (e) => {
