@@ -259,9 +259,9 @@
   var routeMap = {
     home: 'home',
     index: 'home',
+    'paper.html': 'home',
+    paper: 'home',
     cases: 'cases',
-    'paper.html': 'cases',
-    paper: 'cases',
     case: 'cases',
     about: 'about',
     contact: 'contact',
@@ -354,10 +354,13 @@
 
   function routeFromPath(path) {
     var p = String(path || '/').replace(/\/+$/, '') || '/';
-    if (p === '/') return 'home';
+    if (p === '/' || p === '/paper.html' || p === '/paper') return 'home';
     var segs = p.split('/').filter(Boolean);
     var first = (segs[0] || '').toLowerCase();
-    if (first === 'cases' || first === 'case' || first === 'paper.html' || first === 'paper') return segs.length > 1 ? 'case-inner' : 'cases';
+    if (first === 'paper.html' || first === 'paper') {
+      return segs.length > 1 ? (segs[1] === 'cases' ? 'cases' : 'home') : 'home';
+    }
+    if (first === 'cases' || first === 'case') return segs.length > 1 ? 'case-inner' : 'cases';
     if (first === 'about') return 'about';
     if (first === 'contact') return 'contact';
     return routeMap[first] || 'home';
@@ -812,6 +815,33 @@
     return window.setTimeout(sendCasesToFrames, ms);
   });
 
+  function updateNavCurrent(route) {
+    try {
+      var links = document.querySelectorAll('.nav_actions-column a');
+      links.forEach(function (link) {
+        var href = (link.getAttribute('href') || '').toLowerCase();
+        var isCurrent = false;
+        if (route === 'home') {
+          isCurrent = href.indexOf('paper.html') !== -1 || href === '/paper.html' || href === '/paper';
+        } else if (route === 'cases' || route === 'case-inner') {
+          isCurrent = href.indexOf('/cases') !== -1;
+        } else if (route === 'about') {
+          isCurrent = href.indexOf('/about') !== -1;
+        } else if (route === 'contact') {
+          isCurrent = href.indexOf('/contact') !== -1;
+        }
+
+        if (isCurrent) {
+          link.classList.add('w--current');
+          link.setAttribute('aria-current', 'page');
+        } else {
+          link.classList.remove('w--current');
+          link.removeAttribute('aria-current');
+        }
+      });
+    } catch (e) {}
+  }
+
   function timingRace(seconds) {
     return Promise.race([
       firstLoadTiming,
@@ -825,6 +855,7 @@
   function runFirstLoad(data) {
     var container = data && data.next && data.next.container;
     var firstRoute = getSceneRoute(data);
+    updateNavCurrent(firstRoute);
     notifyWebGL(firstRoute, false);
     hideChrome();
 
@@ -925,6 +956,7 @@
             }
             activeRouteTransition = null;
             sendCasesToFrames();
+            updateNavCurrent(route);
             // Estado inicial (fora da tela / em gosma) ANTES do fade pra sempre
             // haver entrada visível.
             if (window.YuusukePaper && window.YuusukePaper.hide) {
