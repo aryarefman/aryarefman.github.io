@@ -594,6 +594,12 @@
     // The poses go on after the scene's own animation each frame, eased in on
     // their route and out everywhere else.
     var weights = { home: 0, contact: 0 };
+    // standing hip height and world-to-model scale, both in the model's own space
+    var takeoff = {
+      done: false, started: 0, low: Infinity,
+      standY: model.worldToLocal(pHips.clone()).y,
+      scale: 1 / model.getWorldScale(V()).y
+    };
     var poseClock = performance.now();
     var rigBase = rig.position.clone();
     var bones = skinned.skeleton.bones;
@@ -613,10 +619,27 @@
       var route = character.currentRoute;
       var now = performance.now(), dt = Math.min(0.1, (now - poseClock) / 1000);
       poseClock = now;
-      // eased by time, not frames, so slow devices change pose just as quickly
-      for (var key in weights) weights[key] += ((route === key ? 1 : 0) - weights[key]) * Math.min(1, dt * 3);
-      if (route === 'contact') loadThrone();
       rig.position.copy(rigBase);
+      rig.updateWorldMatrix(true, true);
+      // The intro crouches and then stands up. Flight holds off until the hips
+      // start coming up out of the crouch, and takes off from there instead.
+      var holdHome = false;
+      if (route === 'home' && character._introPlaying && !takeoff.done) {
+        // in the model's own space, so the intro moving the whole model does not count
+        var hy = hips ? model.worldToLocal(hips.getWorldPosition(va)).y : takeoff.standY;
+        if (!takeoff.started) { takeoff.started = now; takeoff.low = Infinity; }
+        takeoff.low = Math.min(takeoff.low, hy);
+        var dipped = takeoff.low < takeoff.standY - 0.08 * takeoff.scale * height;
+        if ((dipped && hy > takeoff.low + 0.015 * takeoff.scale * height) || now - takeoff.started > 4000) takeoff.done = true;
+        else holdHome = true;
+      }
+      if (route !== 'home') { takeoff.done = false; takeoff.started = 0; }
+      // eased by time, not frames, so slow devices change pose just as quickly
+      for (var key in weights) {
+        var goal = route === key && !(key === 'home' && holdHome) ? 1 : 0;
+        weights[key] += (goal - weights[key]) * Math.min(1, dt * (key === 'home' && takeoff.done ? 4 : 3));
+      }
+      if (route === 'contact') loadThrone();
       var t = performance.now() / 1000;
       if (weights.home > 0.001) rig.position.y += weights.home * height * (0.32 + 0.025 * Math.sin(t * 1.3));
       rig.updateWorldMatrix(true, true);
@@ -630,6 +653,6 @@
       return out;
     };
 
-    window.__detective = { height: height, wings: wingsRoot, glitch: glitch, weights: weights };
+    window.__detective = { height: height, wings: wingsRoot, glitch: glitch, weights: weights, takeoff: takeoff };
   }
 })();
