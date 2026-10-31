@@ -521,9 +521,9 @@
       var right = f.out.R;
       ['L', 'R'].forEach(function (k) {
         var l = limbs[k], out = f.out[k];
-        aim(l.upper, l.fore, f.fwd.clone().addScaledVector(out, 0.35).addScaledVector(f.up, -0.6).addScaledVector(right, sweep * 0.4), w);
-        aim(l.fore, l.hand, f.up.clone().addScaledVector(f.fwd, 0.6).addScaledVector(out, 0.15).addScaledVector(right, sweep), w);
-        aim(l.hand, l.finger, f.up.clone().addScaledVector(f.fwd, 0.15).addScaledVector(out, 0.1).addScaledVector(right, sweep * 0.6), w);
+        aim(l.upper, l.fore, f.fwd.clone().addScaledVector(out, 0.3).addScaledVector(f.up, -0.25).addScaledVector(right, sweep * 0.4), w);
+        aim(l.fore, l.hand, f.fwd.clone().addScaledVector(f.up, 0.5).addScaledVector(out, 0.12).addScaledVector(right, sweep), w);
+        aim(l.hand, l.finger, f.up.clone().addScaledVector(f.fwd, 0.3).addScaledVector(out, 0.1).addScaledVector(right, sweep * 0.6), w);
       });
     }
 
