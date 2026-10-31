@@ -513,6 +513,18 @@
 
     function poseRuler(w) {
       for (var i = 0; i < rulerPose.length; i++) rulerPose[i][0].quaternion.slerp(rulerPose[i][1], w);
+      // Elbows low in front, forearms raised and open hands up near the face,
+      // sweeping left and right together as if scrolling a screen in the air.
+      var f = frame();
+      var t = performance.now() / 1000;
+      var sweep = Math.sin(t * 0.9) * 0.35 + Math.sin(t * 2.3) * 0.04;
+      var right = f.out.R;
+      ['L', 'R'].forEach(function (k) {
+        var l = limbs[k], out = f.out[k];
+        aim(l.upper, l.fore, f.fwd.clone().addScaledVector(out, 0.35).addScaledVector(f.up, -0.6).addScaledVector(right, sweep * 0.4), w);
+        aim(l.fore, l.hand, f.up.clone().addScaledVector(f.fwd, 0.6).addScaledVector(out, 0.15).addScaledVector(right, sweep), w);
+        aim(l.hand, l.finger, f.up.clone().addScaledVector(f.fwd, 0.15).addScaledVector(out, 0.1).addScaledVector(right, sweep * 0.6), w);
+      });
     }
 
     // On the throne: upright back, knees forward, arms on the armrests.
