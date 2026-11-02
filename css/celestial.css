@@ -1,0 +1,273 @@
+/*
+ * Celestial: paper mode as a pantheon at night.
+ * Same layout and behaviour as before; only the look changes.
+ *
+ *   night   #05070f   the sky behind everything
+ *   lapis   #0e142e   the panels (gold-rimmed night glass with constellations)
+ *   gold    #d6b062   accents, lines, glow
+ *   ivory   #f1e9d6   text
+ *
+ * Type: Cinzel (inscriptional Roman capitals) for titles, Cormorant
+ * Garamond for prose, Manrope for the small interface text.
+ */
+
+:root {
+  --dark: #05070f;
+  --light: #f1e9d6;
+  --red: #d6b062;
+  --gold: #d6b062;
+  --gold-soft: #ecd59c;
+  --gold-deep: #a8792e;
+  --lapis: #0e142e;
+  --ivory: #f1e9d6;
+  --night: #05070f;
+  --glow: 0 0 18px rgba(214, 176, 98, .45), 0 0 42px rgba(214, 176, 98, .18);
+}
+
+body {
+  background-color: var(--night);
+  color: var(--ivory);
+  font-family: "Manrope", Arial, sans-serif;
+  letter-spacing: .02em;
+}
+
+/* titles: Grenze Gotisch, a sharp gothic face with a blade-like edge */
+h1, h2,
+.loader_txt,
+.about_title-en,
+.contact_title-en {
+  font-family: "Grenze Gotisch", "Cinzel", serif;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.arya-logo text { font-family: "Grenze Gotisch", "Cinzel", serif; font-weight: 700; }
+h1 { font-size: 4.2em; line-height: .95; color: var(--ivory); text-shadow: var(--glow); }
+h2 { font-size: 10.5em; line-height: .9; color: var(--gold-soft); text-shadow: 0 0 22px rgba(255, 150, 60, .35), 0 0 60px rgba(214, 176, 98, .2); }
+
+.grain { opacity: .14; }
+
+/* ---------- panels: night glass, not paper ---------- */
+.home_paper-wrap,
+.about_paper,
+.contact_paper,
+.cases-inner-paper { mix-blend-mode: normal; opacity: 1; }
+
+/* The old paper's trick, in night colours: where a panel passes over a figure,
+   the figure shows through it with its colours swapped (ember turns ice-blue,
+   blue turns ember). The panels are part see-through; the swap is a backdrop
+   filter clipped to each panel's own torn shape. */
+.home_paper-left, .home_paper-right, .about_paper, .contact_paper, .cases-inner-paper {
+  -webkit-backdrop-filter: hue-rotate(180deg) saturate(2.6) brightness(1.25) contrast(1.1);
+  backdrop-filter: hue-rotate(180deg) saturate(2.6) brightness(1.25) contrast(1.1);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.home_paper-left { -webkit-mask-image: url(/images/celestial/paper-left.webp?v=2); mask-image: url(/images/celestial/paper-left.webp?v=2); }
+.home_paper-right { -webkit-mask-image: url(/images/celestial/paper-right.webp?v=2); mask-image: url(/images/celestial/paper-right.webp?v=2); }
+.about_paper { -webkit-mask-image: url(/images/celestial/about.webp?v=2); mask-image: url(/images/celestial/about.webp?v=2); }
+.about_paper.is-cases { -webkit-mask-image: url(/images/celestial/cases.webp?v=2); mask-image: url(/images/celestial/cases.webp?v=2); }
+.contact_paper { -webkit-mask-image: url(/images/celestial/contact.webp?v=2); mask-image: url(/images/celestial/contact.webp?v=2); }
+.cases-inner-paper { -webkit-mask-image: url(/images/celestial/case-inner.webp?v=2); mask-image: url(/images/celestial/case-inner.webp?v=2); }
+.about_heading,
+.contact_heading { mix-blend-mode: normal; }
+
+.text-color-dark,
+.text-draw.is-dark,
+.about_award,
+.about_content,
+.contact_content { color: var(--ivory); }
+.loader_sound-txt { color: rgba(241, 233, 214, .7); }
+
+/* ---------- loader and sound choice ---------- */
+.loader_paper-full {
+  background-color: var(--night);
+  background-image:
+    /* the beam he descends in */
+    radial-gradient(ellipse 22% 70% at 50% 0%, rgba(235, 240, 255, .16), rgba(5, 7, 15, 0) 75%),
+    radial-gradient(ellipse 55% 45% at 50% 52%, rgba(214, 176, 98, .10), rgba(5, 7, 15, 0) 70%),
+    radial-gradient(ellipse 120% 70% at 50% 125%, rgba(30, 44, 98, .6), rgba(5, 7, 15, 0) 70%);
+}
+.loader_content { margin-top: 42vh; }
+.loader_txt {
+  color: var(--ivory);
+  font-size: 3.6em;
+  letter-spacing: .08em;
+  padding-left: .08em;
+  text-shadow: var(--glow);
+}
+.loader_progress-wrap { width: 20em; filter: drop-shadow(0 0 6px rgba(255, 244, 220, .55)); }
+.loader_btn-column { top: auto; bottom: 14vh; }
+.loader_sound-txt {
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: .72em;
+  letter-spacing: .34em;
+}
+.loader_sound-btn {
+  width: 4.4em; height: 4.4em;
+  color: var(--ivory);
+  border: 1px solid rgba(214, 176, 98, .6);
+  background: radial-gradient(circle at 50% 35%, rgba(214, 176, 98, .18), rgba(5, 7, 15, .6) 70%);
+  box-shadow: 0 0 0 5px rgba(214, 176, 98, .06), inset 0 0 12px rgba(214, 176, 98, .15);
+}
+.loader_sound-btn:hover {
+  color: var(--gold-soft);
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 7px rgba(214, 176, 98, .12), 0 0 30px rgba(214, 176, 98, .45);
+}
+.celestial-loader-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* ---------- navbar ---------- */
+.text-draw {
+  font-family: "Manrope", Arial, sans-serif;
+  font-weight: 500;
+  letter-spacing: .22em;
+  font-size: .78em;
+}
+.text-draw__box { color: var(--gold); }
+.arya-logo text { font-size: 22px; letter-spacing: .06em; fill: var(--ivory); }
+.arya-logo tspan { fill: var(--gold); }
+
+.btn-stop-motion__back { display: none; }
+.btn-stop-motion {
+  border: 1px solid rgba(214, 176, 98, .65);
+  border-radius: 999px;
+  background: rgba(5, 7, 15, .55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: border-color .3s, box-shadow .3s, background .3s;
+}
+.btn-stop-motion:hover {
+  border-color: var(--gold-soft);
+  background: rgba(214, 176, 98, .12);
+  box-shadow: var(--glow);
+}
+.btn-stop-motion__icon { color: var(--gold); }
+.btn-stop-motion__p {
+  color: var(--ivory);
+  font-family: "Manrope", Arial, sans-serif;
+  font-weight: 600;
+  letter-spacing: .2em;
+  font-size: .72em;
+}
+
+/* ---------- home ---------- */
+.home-text-width .text-vertical {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: .04em;
+  font-size: 1.45em;
+  color: var(--ivory);
+}
+.text-color-red { color: var(--gold); }
+
+/* ---------- about / contact / cases ---------- */
+.about_title-en,
+.contact_title-en {
+  color: var(--gold);
+  text-shadow: var(--glow);
+}
+.about_title-en { font-size: 3.4em; }
+.contact_title-en { font-size: 3.1em; transform: rotate(-2deg); }
+.about_txt-content,
+.about_inner p,
+.contact_inner p {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.25em;
+  line-height: 1.45;
+}
+.about_award:hover,
+.about_link:hover { color: var(--gold); }
+.about_awards, .about_award { border-color: rgba(214, 176, 98, .35); }
+.small_tag, .text-style-allcaps { letter-spacing: .16em; }
+.contact_divider { background-color: rgba(214, 176, 98, .45); }
+.contact_item .small_tag { color: rgba(214, 176, 98, .8); }
+
+.case_heading-inner { letter-spacing: .03em; }
+.case_desc {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  text-transform: none;
+  font-size: 1.4em;
+  line-height: 1.35;
+}
+.case_def { border-top-color: rgba(214, 176, 98, .45); }
+.case_def-term { color: var(--gold-soft); letter-spacing: .2em; }
+.case_def-value { letter-spacing: .08em; }
+.case_slide { background-color: var(--lapis); box-shadow: 0 0 0 1px rgba(214, 176, 98, .3), 0 0 30px rgba(214, 176, 98, .12); }
+.case_nav-item { background-color: var(--lapis); }
+.case_nav-item.is-current { box-shadow: 0 0 0 1px var(--gold); }
+
+.cases-content_card { font-family: "Manrope", Arial, sans-serif; }
+.cases-content_card .text-size-large { font-family: "Grenze Gotisch", serif; font-weight: 600; font-size: 1.6em; }
+
+.bot_info .text-size-tiny { letter-spacing: .24em; color: rgba(241, 233, 214, .6); }
+
+/* labels the scripts inject (hover hints, award badges, the about index) */
+.yuusuke-case-hint,
+.yuusuke-award-badge,
+.cases-link:focus-visible {
+  background: var(--gold) !important;
+  color: var(--night) !important;
+  font-family: "Manrope", Arial, sans-serif !important;
+  letter-spacing: .16em;
+  font-weight: 600;
+}
+.about_index-link { font-family: "Manrope", Arial, sans-serif; letter-spacing: .14em; }
+.about_index-link[aria-current="true"] { color: var(--gold) !important; }
+
+/* ---------- glitch, in gold and lapis ---------- */
+.glitch-veil { background: repeating-linear-gradient(0deg, rgba(5, 7, 15, .16) 0 1px, transparent 1px 3px); }
+.glitch-veil::before { background: rgba(236, 213, 156, .3); }
+.glitch-veil::after { background: rgba(30, 44, 98, .5); }
+@keyframes glitch-text {
+  0%   { text-shadow: -.05em 0 rgba(236, 213, 156, .8), .05em 0 rgba(30, 44, 98, .9); transform: translate(.03em, 0); clip-path: inset(0 0 48% 0); }
+  33%  { text-shadow: .06em 0 rgba(236, 213, 156, .8), -.04em 0 rgba(30, 44, 98, .9); transform: translate(-.04em, .01em); clip-path: inset(36% 0 8% 0); }
+  66%  { text-shadow: -.03em 0 rgba(236, 213, 156, .8), .03em 0 rgba(30, 44, 98, .9); transform: none; clip-path: inset(0); }
+  100% { text-shadow: .04em 0 rgba(236, 213, 156, .8), -.05em 0 rgba(30, 44, 98, .9); transform: translate(.02em, -.01em); clip-path: inset(12% 0 30% 0); }
+}
+@keyframes glitch-shift {
+  0%   { transform: translate(-2px, 0); filter: drop-shadow(2px 0 rgba(236, 213, 156, .8)) drop-shadow(-2px 0 rgba(30, 44, 98, .8)); }
+  100% { transform: translate(2px, 1px); filter: drop-shadow(-2px 0 rgba(236, 213, 156, .8)) drop-shadow(2px 0 rgba(30, 44, 98, .8)); }
+}
+
+/* ---------- the doorway to dive mode ---------- */
+.dive-door__half { background: var(--lapis); }
+.dive-door__half.is-r { background: #121a3a; }
+
+/* ---------- phones: Cinzel runs wider than the old brush face ---------- */
+@media screen and (max-width: 767px) {
+  .cases_heading-inner, .about_heading-inner, .contact_heading-inner, .case_heading-inner { font-size: 5.6em; }
+  .text-draw { letter-spacing: .1em; }
+  .contact_row { grid-column-gap: 1.1em; flex-wrap: nowrap; }
+  .contact_item { width: auto; min-width: 0; letter-spacing: .02em; font-size: .86em; }
+  .contact_item .text-size-small { white-space: nowrap; }
+  /* an address reads better in lower case, and fits a phone on one line */
+  .contact_item[href^="mailto:"] .text-style-allcaps { text-transform: none; letter-spacing: .01em; }
+  .about_title-en { font-size: 1.9em; }
+}
+@media screen and (max-width: 479px) {
+  h2 { font-size: 5.4em; }
+  .loader_txt { font-size: 2.6em; }
+  .arya-logo text { letter-spacing: .1em; }
+}
+
+/* layout: text always above the night-glass panels */
+.home-content, .home-heading-width, .home-text-width { position: relative; z-index: 200; }
+.home_paper-wrap { z-index: 150; }
+.home-heading-width h1 { padding-left: .1em; }
+
+/* loader: the statue stands in the upper half, the word and the bar beneath her */
+.loader_content { margin-top: 64vh; }
+.loader_btn-column { bottom: 11vh; }
+
+/* dragging the hero must not select the page text */
+.home-content, .home-heading-width, .home-text-width, .webgl-iframe, iframe { -webkit-user-select: none; user-select: none; }
+::selection { background: rgba(214, 176, 98, .35); color: inherit; }
+
+/* the raised home text must let the mouse and wheel through to the 3D cards */
+.home-content, .home-heading-width, .home-text-width { pointer-events: none; }
+.home-content a, .home-content button { pointer-events: auto; }
+/* the two sound buttons centred under their caption */
+.loader_btn-group { justify-content: center; align-self: center; margin-left: auto; margin-right: auto; }
+.loader_sound-txt { padding-left: .34em; }

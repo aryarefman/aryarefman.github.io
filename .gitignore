@@ -1,1 +1,12 @@
 tools/__pycache__/
+models/characters_downloaded/
+_incoming_models/
+needs-rig/
+_decimated_for_mixamo/
+node_modules/
+*.png
+
+
+
+# local work files: old models, review packs, dev scripts (kept on disk, not published)
+_archive/
