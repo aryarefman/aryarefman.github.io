@@ -46,7 +46,8 @@ html.is-glitching .glitch-veil { opacity: 1; animation: glitch-flicker .12s step
 
 html.is-glitching [data-title="morph"] { animation: glitch-text .26s steps(2, end) infinite; }
 html.is-glitching .yuu_logo-link { animation: glitch-shift .18s steps(2, end) infinite; }
-html.is-glitching .webgl_wrapper { animation: glitch-frame .24s steps(3, end) infinite; }
+/* Seraphim and 3D canvas glitch disabled per user preference */
+html.is-glitching .webgl_wrapper { animation: none !important; }
 html.is-glitching .text-vertical,
 html.is-glitching .case_desc,
 html.is-glitching .about_title-en,

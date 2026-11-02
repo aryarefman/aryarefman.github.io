@@ -1,0 +1,43 @@
+<svg width="260" height="20" viewBox="0 0 260 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- A beam of light between two feathers, with a bright spark travelling along it. -->
+  <defs>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f6e7c1" stop-opacity="0"/>
+      <stop offset=".12" stop-color="#f6e7c1" stop-opacity=".85"/>
+      <stop offset=".5" stop-color="#ffffff"/>
+      <stop offset=".88" stop-color="#f6e7c1" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#f6e7c1" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="feather" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d6b062"/>
+    </linearGradient>
+    <radialGradient id="spark" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".35" stop-color="#fff2cf" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- a feather: a curved vane with fine barbs -->
+    <g id="vane">
+      <path d="M0 10 C6 4.5 14 3.5 22 6.2 C15 6.6 9 8 0 10 Z" fill="url(#feather)"/>
+      <path d="M0 10 C6 15.5 14 16.5 22 13.8 C15 13.4 9 12 0 10 Z" fill="url(#feather)" opacity=".75"/>
+      <path d="M4 9.2 L8 6.4 M8 8.7 L12 5.6 M12 8.2 L16 5.4 M4 10.8 L8 13.6 M8 11.3 L12 14.4 M12 11.8 L16 14.6" stroke="#05070f" stroke-width=".5" opacity=".55"/>
+    </g>
+  </defs>
+  <!-- the beam: a hairline core and a soft halo -->
+  <rect x="24" y="8.4" width="212" height="3.2" rx="1.6" fill="url(#beam)" opacity=".28"/>
+  <rect x="24" y="9.5" width="212" height="1" fill="url(#beam)"/>
+  <!-- tiny stars along it -->
+  <g fill="#f6e7c1">
+    <circle cx="60" cy="10" r=".9"/><circle cx="100" cy="10" r=".9"/><circle cx="130" cy="10" r="1.3"/>
+    <circle cx="160" cy="10" r=".9"/><circle cx="200" cy="10" r=".9"/>
+  </g>
+  <!-- feathers at each end -->
+  <use href="#vane" transform="translate(26 0) scale(-1 1)"/>
+  <use href="#vane" transform="translate(234 0)"/>
+  <!-- the travelling spark -->
+  <circle cx="0" cy="10" r="7" fill="url(#spark)">
+    <animate attributeName="cx" values="30;230" dur="1.8s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="5;8;5" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+</svg>

@@ -18,7 +18,7 @@
   var WEBGL_FALLBACK = 5;
   var DEPS_TIMEOUT = 4000;
   var BURN_DURATION = 1.8;
-  var BURN_FIRE = '#ff5010';
+  var BURN_FIRE = '#ffd27a'; // the veil burns away in gold light
   // Ignition point in 0..1 (y up): the paper catches where the text was.
   var BURN_ORIGIN = [0.5, 0.5];
   var SCRIPT_BASE = '/webflow-scripts/';

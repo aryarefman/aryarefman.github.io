@@ -1,9 +1,7 @@
 /*
- * The detective: gives the paper-mode character white hair and wide white angel wings that
- * grow from the shoulder blades and ride the upper spine. Their outer edges
- * glitch: bands of feathers jump sideways and flash red and cyan.
- *
- * The wings are "Angel wings" by Sxnneh on Sketchfab (Sketchfab Standard licence).
+ * The poses and the case files: the flight on home, the seat on contact, and
+ * sealed files floating between the real cases. The bodies wearing these
+ * poses come from cast.js.
  *
  * The scene bundle keeps its own copy of three.js, so this file borrows the
  * constructors from objects already in the scene instead of importing another.
@@ -58,14 +56,15 @@
    * that tears and flickers.
    */
   var BLANKS = 6;
-  var BLANK_MARK = 'blank-case-file';
+  // a 1x1 transparent image, so the scene's texture loader has a real file to read
+  var BLANK_MARK = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
   var ERRORS = [
-    ['ERROR 404', 'CASE FILE NOT FOUND'],
-    ['ACCESS DENIED', 'CLEARANCE LEVEL 0'],
-    ['SIGNAL LOST', 'RECONNECTING...'],
-    ['DATA CORRUPTED', '0x00000BAD'],
-    ['FATAL ERROR', 'EVIDENCE MISSING'],
-    ['NO SIGNAL', 'CHECK INPUT']
+    ['Sealed', 'BY ORDER OF THE COUNCIL'],
+    ['Forbidden', 'CLEARANCE: OLYMPUS'],
+    ['In the forge', 'STILL BEING BUILT'],
+    ['Redacted', 'UNDER OATH'],
+    ['Lost scroll', 'EVIDENCE PENDING'],
+    ['Prophecy', 'REVEALED SOON']
   ];
 
   function blankFiles(character) {
@@ -125,56 +124,53 @@
       }).join('');
     }
 
+    // A sealed file: cobalt sheet on a fine grid, a gold tab, the notice set in
+    // mono, and a scan bar that sweeps down it. Now and then the notice garbles.
     function draw(s) {
       var c = s.ctx, w = s.canvas.width, h = s.canvas.height;
+      var t = performance.now() / 1000;
       c.globalAlpha = 1;
-      c.fillStyle = '#07070b';
+      var g = c.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, '#1a2a5e'); g.addColorStop(1, '#070b1a');
+      c.fillStyle = g;
       c.fillRect(0, 0, w, h);
-      // static
-      for (var i = 0; i < 1600; i++) {
-        var g = Math.random() * 70 | 0;
-        c.fillStyle = 'rgb(' + g + ',' + g + ',' + (g + 8) + ')';
-        c.fillRect(Math.random() * w | 0, Math.random() * h | 0, 1 + Math.random() * 4 | 0, 1);
-      }
-      // the error message, split into red and cyan and now and then garbled
-      var jx = (Math.random() - 0.5) * 10, rate = Math.random() < 0.25 ? 0.35 : 0.04;
+      c.strokeStyle = 'rgba(232, 196, 114, 0.07)';
+      c.lineWidth = 1;
+      for (var x = 0; x <= w; x += 20) { c.beginPath(); c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, h); c.stroke(); }
+      for (var y = 0; y <= h; y += 20) { c.beginPath(); c.moveTo(0, y + 0.5); c.lineTo(w, y + 0.5); c.stroke(); }
+      // the scan bar
+      var sy = (t * 90 + s.message[0].length * 37) % (h + 80) - 40;
+      var sg = c.createLinearGradient(0, sy - 40, 0, sy + 40);
+      sg.addColorStop(0, 'rgba(232, 196, 114, 0)'); sg.addColorStop(0.5, 'rgba(232, 196, 114, 0.16)'); sg.addColorStop(1, 'rgba(232, 196, 114, 0)');
+      c.fillStyle = sg; c.fillRect(0, sy - 40, w, 80);
+      // frame and tab
+      c.strokeStyle = 'rgba(232, 236, 245, 0.35)';
+      c.strokeRect(18.5, 18.5, w - 37, h - 37);
+      c.fillStyle = '#e8c472';
+      c.fillRect(18, 18, 132, 30);
+      c.fillStyle = '#0a1230';
+      c.font = '600 15px "Manrope", Arial, sans-serif';
+      c.textBaseline = 'middle';
+      c.textAlign = 'left';
+      c.fillText('SEALED FILE', 30, 34);
+      var rate = Math.random() < 0.12 ? 0.3 : 0;
       var title = scramble(s.message[0], rate), sub = scramble(s.message[1], rate);
       c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.font = '700 64px "Courier New", monospace';
-      c.globalAlpha = 0.85;
-      c.fillStyle = '#00ffea'; c.fillText(title, w / 2 - 5 + jx, h * 0.44);
-      c.fillStyle = '#eb1716'; c.fillText(title, w / 2 + 5 + jx, h * 0.44);
-      c.globalAlpha = 1;
-      c.fillStyle = '#f2f0f5'; c.fillText(title, w / 2 + jx, h * 0.44);
-      c.font = '400 26px "Courier New", monospace';
-      c.fillStyle = 'rgba(242, 240, 245, 0.75)';
-      c.fillText(sub, w / 2 - jx * 0.5, h * 0.62);
-      c.font = '400 16px "Courier New", monospace';
-      c.textAlign = 'left';
-      c.fillStyle = 'rgba(235, 23, 22, 0.8)';
-      c.fillText('● REC  ' + (Date.now() % 100000).toString().padStart(5, '0'), 24, 30);
-      // torn bands: a strip of the screen slides sideways and takes a colour
-      var bands = 1 + (Math.random() * 4 | 0);
-      for (var k = 0; k < bands; k++) {
-        var y = Math.random() * h, bh = 3 + Math.random() * 28, shift = (Math.random() - 0.5) * 120;
-        c.drawImage(s.canvas, 0, y, w, bh, shift, y, w, bh);
-        c.globalAlpha = 0.25 + Math.random() * 0.35;
-        c.fillStyle = Math.random() < 0.5 ? '#eb1716' : '#00ffea';
-        c.fillRect(0, y, w, Math.max(2, bh * 0.25));
-        c.globalAlpha = 1;
+      c.fillStyle = '#eef1f7';
+      c.font = '600 64px "Grenze Gotisch", "Cinzel", Georgia, serif';
+      c.fillText(title, w / 2, h * 0.5);
+      c.font = '500 18px "Manrope", Arial, sans-serif';
+      c.fillStyle = 'rgba(238, 241, 247, 0.6)';
+      c.fillText(sub, w / 2, h * 0.66);
+      c.textAlign = 'right';
+      c.font = '500 14px "Manrope", Arial, sans-serif';
+      c.fillStyle = 'rgba(232, 196, 114, 0.9)';
+      c.fillText('NO. ' + (1000 + (s.message[0].length * 97) % 9000), w - 32, h - 38);
+      // a rare slip: one band slides sideways
+      if (rate) {
+        var by = Math.random() * h, bh = 6 + Math.random() * 18;
+        c.drawImage(s.canvas, 0, by, w, bh, (Math.random() - 0.5) * 60, by, w, bh);
       }
-      // scanlines
-      c.globalAlpha = 0.28;
-      c.fillStyle = '#000';
-      for (var l = 0; l < h; l += 3) c.fillRect(0, l, w, 1);
-      // now and then the whole screen blows out red
-      if (Math.random() < 0.05) {
-        c.globalAlpha = 0.45;
-        c.fillStyle = '#eb1716';
-        c.fillRect(0, 0, w, h);
-      }
-      c.globalAlpha = 1;
       s.tex.needsUpdate = true;
     }
 
@@ -350,11 +346,8 @@
     var glitch = { time: { value: 0 }, amount: { value: 0.5 } };
 
     var loader = exp.resources && exp.resources.loaders && exp.resources.loaders.gltfLoader;
-    if (loader) {
-      loader.load(WING_URL, function (gltf) {
-        try { hangWings(gltf.scene); } catch (err) { console.warn('[detective] wings', err); }
-      });
-    }
+    // The wings are retired: the cast (cast.js) has a different character on
+    // every route, and none of them wear wings.
 
     // White feathers whose outer bands jump sideways and flash red or cyan.
     // `span` is the half span along the mesh's x; bands run along `bandAxis`.
@@ -547,8 +540,9 @@
     }
 
     // ---------- the throne ----------
-    // "Demon King Throne" by Unreal_Joelab on Sketchfab (CC BY 4.0). Loaded the
-    // first time the contact page shows, and set under the seated body.
+    // "Demon King Throne" by Unreal_Joelab on Sketchfab (CC BY 4.0), re-cast
+    // in gold for Jupiter. Loaded the first time the contact page shows, and
+    // set under the seated body.
     var throne = null, throneLoading = false;
     function loadThrone() {
       if (throne || throneLoading || !loader) return;
@@ -563,6 +557,14 @@
       scene.traverse(function (o) {
         if (!o.isMesh) return;
         o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
+        // gilded: the throne's own texture only shades the gold
+        (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) {
+          if (!m || !m.color) return;
+          m.color.setHex(0xd9ad55);
+          m.userData.stageKeep = true;
+          if ('metalness' in m) { m.metalness = 0.6; m.roughness = 0.32; }
+          if (m.emissive) { m.emissive.setHex(0x2a1a04); m.emissiveMap = null; }
+        });
         var pos = o.geometry.attributes.position, step = Math.max(1, Math.floor(pos.count / 6000));
         for (var i = 0; i < pos.count; i += step) {
           var p = V().fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
@@ -651,7 +653,8 @@
         var goal = route === key && !(key === 'home' && holdHome) ? 1 : 0;
         weights[key] += (goal - weights[key]) * Math.min(1, dt * (key === 'home' && takeoff.done ? 4 : 3));
       }
-      if (route === 'contact') loadThrone();
+      // Zeus stands on contact; the throne stays unloaded.
+      if (route === 'contact' && window.__wantThrone) loadThrone();
       var t = performance.now() / 1000;
       if (weights.home > 0.001) rig.position.y += weights.home * height * (0.32 + 0.025 * Math.sin(t * 1.3));
       rig.updateWorldMatrix(true, true);
