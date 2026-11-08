@@ -471,7 +471,7 @@
     // Real protection: notes JSON is AES-256-GCM ciphertext (PBKDF2-SHA256 key). Wrong password = GCM auth failure.
     const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
     async function fetchEnvelope(proj) {
-      const res = await fetch(proj.dataFile || `data/${proj.id}.json`);
+      const res = await fetch(proj.dataFile || `data/${proj.id}.json`, { cache: 'no-cache' });
       if (!res.ok) throw new Error('load');
       return res.json();
     }
@@ -518,7 +518,7 @@
     // Load Projects Hub
     async function loadHub() {
       try {
-        const res = await fetch('data/projects.json');
+        const res = await fetch('data/projects.json', { cache: 'no-cache' });
         if (!res.ok) throw new Error(res.status);
         projects = await res.json();
       } catch {
