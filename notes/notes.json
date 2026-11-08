@@ -1,0 +1,247 @@
+[
+  {
+    "id": "e4f447794f68d969",
+    "title": "Overseas",
+    "body": "<p></p><h2>INPUT</h2><ol><li>CV</li><li>Question [Budget, Preferensi Tujuan, Tujuan Spesifik (jenis program(exchange, shor course, master degree, dll)/scolarship)]</li></ol><p></p><h2>OUTPUT</h2><p>Kelompok Fitur Pertama [Match &amp; Preparation Hub]:</p><ol><li>Scolarship [detail lengkapnya persyaratannya]</li><li>3 agent: Life style, Biaya hidup, berdasarkan INPUT apakah sudah memenuhi syarat si scolarship [menyesuaikan skor dalam negeri ke negara tujuan, misal konversi IPK ke GPA, dll], Tingkat Persaingan, Komunitas [sosmed, info kedutaan]</li><li>misanya bbrp syarat terpenuhi maka akan dibeirkan rekomendasi untuk memnuhi syarat tersebut</li><li>done -&gt; simpan ke bookmark </li><li>milestone untuk kesana, seperti dibawah ini:</li><li>ngerivew berkas-berkas yang disubmit sudah sesuai kriteria</li><li>(keseluruhan -&gt; chatbot -&gt; misal: menyesuaikan timeline langsung lewat chatbot [langsung edit web-nya -&gt; animasi swarm pluggin claude])</li></ol><p><img src=\"images/169775f837185bda.png\"></p><p><br>Kelompok Fitur Kedua:</p><ol><li>map yang isinya persebaran scolarship</li><li>membanding negara asal dengan negara tujuan [ Life style, Biaya hidup ]</li></ol><p></p>",
+    "format": "html",
+    "parent": "c88b1b08d6019b6b",
+    "createdAt": 1793977547920,
+    "updatedAt": 1794108881725,
+    "icon": "em:wave",
+    "cover": "images/e6e1c5fa163935d9.jpg",
+    "blocks": [
+      {
+        "id": "bmw71t8hq1zaqh",
+        "type": "p",
+        "text": ""
+      },
+      {
+        "id": "bmw6sbw360n5ut",
+        "type": "h2",
+        "text": "INPUT"
+      },
+      {
+        "id": "bmw6sbw361wvqx",
+        "type": "ol",
+        "text": "CV"
+      },
+      {
+        "id": "bmw6sbw362ilcs",
+        "type": "ol",
+        "text": "Question [Budget, Preferensi Tujuan, Tujuan Spesifik (jenis program(exchange, shor course, master degree, dll)/scolarship)]"
+      },
+      {
+        "id": "bmw6sfnu60g4xa",
+        "type": "p",
+        "text": ""
+      },
+      {
+        "id": "bmw6sbw363orm0",
+        "type": "h2",
+        "text": "OUTPUT"
+      },
+      {
+        "id": "bmw6sbw364j0in",
+        "type": "p",
+        "text": "Kelompok Fitur Pertama [Match &amp; Preparation Hub]:"
+      },
+      {
+        "id": "bmw6sbw365pn26",
+        "type": "ol",
+        "text": "Scolarship [detail lengkapnya persyaratannya]"
+      },
+      {
+        "id": "bmw6sbw366lk9n",
+        "type": "ol",
+        "text": "3 agent: Life style, Biaya hidup, berdasarkan INPUT apakah sudah memenuhi syarat si scolarship [menyesuaikan skor dalam negeri ke negara tujuan, misal konversi IPK ke GPA, dll], Tingkat Persaingan, Komunitas [sosmed, info kedutaan]"
+      },
+      {
+        "id": "bmw6sbw367zz52",
+        "type": "ol",
+        "text": "misanya bbrp syarat terpenuhi maka akan dibeirkan rekomendasi untuk memnuhi syarat tersebut"
+      },
+      {
+        "id": "bmw6sbw368purg",
+        "type": "ol",
+        "text": "done -&gt; simpan ke bookmark "
+      },
+      {
+        "id": "bmw6sbw3695nhi",
+        "type": "ol",
+        "text": "milestone untuk kesana, seperti dibawah ini:"
+      },
+      {
+        "id": "bmw6sbw36bytws",
+        "type": "ol",
+        "text": "ngerivew berkas-berkas yang disubmit sudah sesuai kriteria"
+      },
+      {
+        "id": "bmw6sbw36c7i18",
+        "type": "ol",
+        "text": "(keseluruhan -&gt; chatbot -&gt; misal: menyesuaikan timeline langsung lewat chatbot [langsung edit web-nya -&gt; animasi swarm pluggin claude])"
+      },
+      {
+        "id": "bmw6sbw36a0knc",
+        "type": "image",
+        "text": "[5]",
+        "src": "images/169775f837185bda.png"
+      },
+      {
+        "id": "bmw6sbw36dhv4n",
+        "type": "p",
+        "text": "\nKelompok Fitur Kedua:"
+      },
+      {
+        "id": "bmw6sbw36e829h",
+        "type": "ol",
+        "text": "map yang isinya persebaran scolarship"
+      },
+      {
+        "id": "bmw6sbw36f51k5",
+        "type": "ol",
+        "text": "membanding negara asal dengan negara tujuan [ Life style, Biaya hidup ]"
+      },
+      {
+        "id": "bmw6sfxjh1khjh",
+        "type": "p",
+        "text": ""
+      }
+    ]
+  },
+  {
+    "id": "8c26538b66769a5f",
+    "title": "Bagi Tugas Abstrak",
+    "body": "<p></p><ul><li>9 November -&gt; deadline</li><li>10 November -&gt; review dan kumpilin max 22.00<br></li></ul><h2>Pembagaian Abstrak</h2><ol><li>Arya<br>4 dan 6</li><li>Icaz<br>1 dan 3</li><li>Ninim<br>7</li><li>Daffan<br>2 dan 5<br></li></ol>",
+    "format": "html",
+    "parent": "c88b1b08d6019b6b",
+    "createdAt": 1793977628943,
+    "updatedAt": 1794094982115,
+    "blocks": [
+      {
+        "id": "bmw71trwo27j1t",
+        "type": "p",
+        "text": ""
+      },
+      {
+        "id": "bmw6sdu2vh12ak",
+        "type": "ul",
+        "text": "9 November -&gt; deadline"
+      },
+      {
+        "id": "bmw6seluxn4ho7",
+        "type": "ul",
+        "text": "10 November -&gt; review dan kumpilin max 22.00\n"
+      },
+      {
+        "id": "bmw6se0nemb5n7",
+        "type": "h2",
+        "text": "Pembagaian Abstrak"
+      },
+      {
+        "id": "bmw6sdu2vi5blt",
+        "type": "ol",
+        "text": "Arya\n4 dan 6"
+      },
+      {
+        "id": "bmw6sdu2vju1eq",
+        "type": "ol",
+        "text": "Icaz\n1 dan 3"
+      },
+      {
+        "id": "bmw6sdu2vkm0u3",
+        "type": "ol",
+        "text": "Ninim\n7"
+      },
+      {
+        "id": "bmw6sdu2vl52s4",
+        "type": "ol",
+        "text": "Daffan\n2 dan 5\n"
+      }
+    ],
+    "icon": "em:thinking",
+    "cover": "images/b845d87be4601d9d.jpg"
+  },
+  {
+    "id": "c88b1b08d6019b6b",
+    "title": "6 November 2026",
+    "body": "<p></p>",
+    "format": "html",
+    "blocks": [
+      {
+        "id": "07725d40c3d6",
+        "type": "p",
+        "text": ""
+      }
+    ],
+    "parent": null,
+    "createdAt": 1794079353721,
+    "updatedAt": 1794079375306
+  },
+  {
+    "id": "3d189fccee6ab406",
+    "title": "Sorce",
+    "body": "<h2>GDGOC</h2><div><a href=\"https://gdgoncampusitb.com/hackathon/dashboard\"><div><div>GDGoC ITB 2026</div><span>https://gdgoncampusitb.com/hackathon/dashboard</span></div></a></div><h2>Kuisioner</h2><div><a href=\"https://forms.gle/mmJBd7u9Y6QdgzNNA\"><div><div>Survei Kendala Persiapan Studi &amp; Beasiswa Luar Negeri Mahasiswa Indonesia</div><p>Halo teman-teman! 👋 Punya impian untuk mengikuti program exchange, short course, atau melanjutkan pendidikan ke luar negeri? Namun, masih kesulitan menemukan informasi yang tepat atau belum tahu harus mulai mempersiapkan semuanya dari mana? Melalui survei singkat ini, kami ingin mengetahui berbagai tantangan yang dihadapi mahasiswa dalam mencari informasi mengenai kesempatan belajar di luar negeri. Pengisian survei hanya membutuhkan waktu sekitar 1–2 menit. Seluruh jawaban akan dijaga kerahasiaannya dan bersifat anonim. Setiap respons yang kamu berikan akan sangat berarti dan membantu mendukung penelitian ini. Terima kasih atas waktu dan partisipasinya! 🙌</p><span>https://forms.gle/mmJBd7u9Y6QdgzNNA</span></div><div></div></a></div><div><a href=\"https://docs.google.com/spreadsheets/d/1oCzZV7ikW_laM5daRMBIat2hZWCO1bHk7UQTHu8a7a0/edit?usp=sharing\"><div><div>Survei Kendala Persiapan Studi &amp; Beasiswa Luar Negeri Mahasiswa Indonesia (Jawaban)</div><span>https://docs.google.com/spreadsheets/d/1oCzZV7ikW_laM5daRMBIat2hZWCO1bHk7UQTHu8a7a0/edit?usp=sharing</span></div><div></div></a></div><h2>Inspiration</h2><div><a href=\"https://devpost.com/software/boundless-6nw2hx?_gl=1*108z0rp*_gcl_au*MTQ2NzI1MTc4Ny4xNzkwNjU0NDEwLi0uLS4xNzkzMzQyNjE3LjE3NzMwODY4NTcuMTc5MzM0MjYxNy4xNzkzMzQyNjE3*_ga*NTYxMDY2Njc0LjE3OTA2NTQ0MTE.*_ga_0YHJK3Y10M*czE3OTM5NDQ3MzckbzE0JGcxJHQxNzkzOTQ0NzUyJGo0NSRsMCRoMA\"><div><div>devpost.com</div><span>https://devpost.com/software/boundless-6nw2hx?_gl=1*108z0rp*_gcl_au*MTQ2NzI1MTc4Ny4xNzkwNjU0NDEwLi0uLS4xNzkzMzQyNjE3LjE3NzMwODY4NTcuMTc5MzM0MjYxNy4xNzkzMzQyNjE3*_ga*NTYxMDY2Njc0LjE3OTA2NTQ0MTE.*_ga_0YHJK3Y10M*czE3OTM5NDQ3MzckbzE0JGcxJHQxNzkzOTQ0NzUyJGo0NSRsMCRoMA</span></div></a></div><div><a href=\"https://www.gather.town/\"><div><div>Gather | The Delightful Virtual Office for Remote Teams</div><p>Gather is a virtual workspace that feels refreshingly human. Meet, chat, and interact like your remote team is in person.</p><span>https://www.gather.town/</span></div><div></div></a></div>",
+    "format": "html",
+    "blocks": [
+      {
+        "id": "bmw76j0la1cetq",
+        "type": "h2",
+        "text": "GDGOC"
+      },
+      {
+        "id": "a391f1968a00",
+        "type": "bookmark",
+        "url": "https://gdgoncampusitb.com/hackathon/dashboard",
+        "title": "GDGoC ITB 2026",
+        "icon": "https://gdgoncampusitb.com/favicon-32x32.png"
+      },
+      {
+        "id": "bmw76ibnx0pc1y",
+        "type": "h2",
+        "text": "Kuisioner"
+      },
+      {
+        "id": "bmw76jqk024kjc",
+        "type": "bookmark",
+        "url": "https://forms.gle/mmJBd7u9Y6QdgzNNA",
+        "title": "Survei Kendala Persiapan Studi & Beasiswa Luar Negeri Mahasiswa Indonesia",
+        "description": "Halo teman-teman! 👋 Punya impian untuk mengikuti program exchange, short course, atau melanjutkan pendidikan ke luar negeri? Namun, masih kesulitan menemukan informasi yang tepat atau belum tahu harus mulai mempersiapkan semuanya dari mana? Melalui survei singkat ini, kami ingin mengetahui berbagai tantangan yang dihadapi mahasiswa dalam mencari informasi mengenai kesempatan belajar di luar negeri. Pengisian survei hanya membutuhkan waktu sekitar 1–2 menit. Seluruh jawaban akan dijaga kerahasiaannya dan bersifat anonim. Setiap respons yang kamu berikan akan sangat berarti dan membantu mendukung penelitian ini. Terima kasih atas waktu dan partisipasinya! 🙌",
+        "image": "https://lh5.googleusercontent.com/UhoPEmmZk6-0bWC6e_h4Zb27QFyy-Bl-O9gxmKGT2A7ObRwctD_Pqtq4wa1TGtYIRMBVVPYyeu4fWWI=w1200-h630-p",
+        "icon": "https://www.gstatic.com/images/branding/productlogos/forms_2026q3/v1/web-16dp/logo_forms_2026q3_color_1x_web_16dp.png"
+      },
+      {
+        "id": "bmw76m0ga68h0p",
+        "type": "bookmark",
+        "url": "https://docs.google.com/spreadsheets/d/1oCzZV7ikW_laM5daRMBIat2hZWCO1bHk7UQTHu8a7a0/edit?usp=sharing",
+        "title": "Survei Kendala Persiapan Studi & Beasiswa Luar Negeri Mahasiswa Indonesia (Jawaban)",
+        "image": "https://lh7-us.googleusercontent.com/docs/AHkbwyI6u8zDXDM5RV_qaavfVAj6JdfQn5qa2bohnA4NkFCV2ZbQT5HL706H9cSJpY6-wzp4Rsam83Jdw0GwTq6CbJRPO2fE3f_Sl4appaqKs9Tq47QOLI4=w1200-h630-p",
+        "icon": "https://ssl.gstatic.com/docs/spreadsheets/spreadsheets-2026-v3.ico"
+      },
+      {
+        "id": "bmw76l7d644vg0",
+        "type": "h2",
+        "text": "Inspiration"
+      },
+      {
+        "id": "bmw76lljv55zt0",
+        "type": "bookmark",
+        "url": "https://devpost.com/software/boundless-6nw2hx?_gl=1*108z0rp*_gcl_au*MTQ2NzI1MTc4Ny4xNzkwNjU0NDEwLi0uLS4xNzkzMzQyNjE3LjE3NzMwODY4NTcuMTc5MzM0MjYxNy4xNzkzMzQyNjE3*_ga*NTYxMDY2Njc0LjE3OTA2NTQ0MTE.*_ga_0YHJK3Y10M*czE3OTM5NDQ3MzckbzE0JGcxJHQxNzkzOTQ0NzUyJGo0NSRsMCRoMA",
+        "title": "devpost.com"
+      },
+      {
+        "id": "bmw76mg9a7yc8k",
+        "type": "bookmark",
+        "url": "https://www.gather.town/",
+        "title": "Gather | The Delightful Virtual Office for Remote Teams",
+        "description": "Gather is a virtual workspace that feels refreshingly human. Meet, chat, and interact like your remote team is in person.",
+        "image": "https://framerusercontent.com/assets/xPmm8fJxnAUtfkMV86nsqCv8w.png",
+        "icon": "https://framerusercontent.com/images/P5hrzskVvpcfIIXVKNXfzAkXLw.png"
+      }
+    ],
+    "parent": "c88b1b08d6019b6b",
+    "createdAt": 1794102694798,
+    "updatedAt": 1794108683175,
+    "icon": "em:typing",
+    "cover": "images/a33ddf500f90fb98.jpg"
+  }
+]

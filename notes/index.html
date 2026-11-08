@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Notes · Arya Refman</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FAF6ED;
+      --paper-2: #F0EAD6;
+      --paper-3: #E6DFCA;
+      --ink: #1B1712;
+      --clay: #D96838;
+      --muted: #7E7265;
+      --border: 2px solid var(--ink);
+      --shadow: 3px 3px 0 var(--ink);
+      --font-body: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Geist Mono', monospace;
+      --font-pixel: 'Pixelify Sans', monospace;
+      --em-sm: 18px;
+      --em-md: 28px;
+      --em-lg: 48px;
+    }
+
+    body.dark {
+      --paper: #1F1D24;
+      --paper-2: #28252E;
+      --paper-3: #34303C;
+      --ink: #ECE8F2;
+      --clay: #E07A4D;
+      --muted: #A39BAE;
+      --border: 2px solid var(--ink);
+      --shadow: 3px 3px 0 var(--ink);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+
+    /* Clawd Emotes */
+    .em {
+      content: ""; display: inline-block; flex: none; width: var(--em-px, var(--em-md)); height: var(--em-px, var(--em-md));
+      background: var(--em-src) center / contain no-repeat; image-rendering: pixelated; pointer-events: none; vertical-align: middle;
+    }
+    [data-size="sm"] { --em-px: var(--em-sm); }
+    [data-size="md"] { --em-px: var(--em-md); }
+    [data-size="lg"] { --em-px: var(--em-lg); }
+
+    [data-emote="idle"] { --em-src: url(clawd/e/idle.svg); }
+    [data-emote="thinking"] { --em-src: url(clawd/e/thinking.svg); }
+    [data-emote="typing"] { --em-src: url(clawd/e/typing.svg); }
+    [data-emote="happy"] { --em-src: url(clawd/e/happy.svg); }
+    [data-emote="celebrate"] { --em-src: url(clawd/e/celebrate.svg); }
+    [data-emote="error"] { --em-src: url(clawd/e/error.svg); }
+    [data-emote="sleepy"] { --em-src: url(clawd/e/sleepy.svg); }
+    [data-emote="waiting"] { --em-src: url(clawd/e/waiting.svg); }
+    [data-emote="searching"] { --em-src: url(clawd/e/searching.svg); }
+    [data-emote="reading"] { --em-src: url(clawd/e/reading.svg); }
+    [data-emote="coffee"] { --em-src: url(clawd/e/coffee.svg); }
+    [data-emote="alert"] { --em-src: url(clawd/e/alert.svg); }
+    [data-emote="success"] { --em-src: url(clawd/e/success.svg); }
+    [data-emote="confused"] { --em-src: url(clawd/e/confused.svg); }
+    [data-emote="wave"] { --em-src: url(clawd/e/wave.svg); }
+    [data-emote="loading"] { --em-src: url(clawd/e/loading.svg); }
+    [data-emote="offline"] { --em-src: url(clawd/e/offline.svg); }
+    [data-emote="empty"] { --em-src: url(clawd/e/empty.svg); }
+
+    /* App Layout */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px; flex: none; background: var(--paper-2); border-right: var(--border);
+      display: flex; flex-direction: column; height: 100%; z-index: 50; transition: transform .2s ease;
+    }
+    .sidebar-head {
+      padding: 16px; border-bottom: var(--border); display: flex; align-items: center; justify-content: space-between;
+    }
+    .brand { font-family: var(--font-pixel); font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .side-acts { display: flex; align-items: center; gap: 6px; }
+    .icon-btn {
+      background: transparent; border: 1.5px solid var(--ink); border-radius: 4px; padding: 4px 8px;
+      font: 600 12px var(--font-mono); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .icon-btn:hover { background: var(--ink); color: var(--paper); }
+
+    .search-box { padding: 12px 16px; border-bottom: var(--border); }
+    .search-in {
+      width: 100%; padding: 8px 12px; background: var(--paper); border: 1.5px solid var(--ink);
+      font: 500 13px var(--font-body); color: var(--ink); border-radius: 4px; outline: none;
+    }
+    .search-in:focus { border-color: var(--clay); box-shadow: inset 0 0 0 1px var(--clay); }
+
+    .tree { flex: 1; overflow-y: auto; padding: 12px 8px; list-style: none; }
+    .tree-item { margin-bottom: 2px; }
+    .tree-row {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px;
+      cursor: pointer; user-select: none; transition: background .1s; text-decoration: none; color: inherit;
+    }
+    .tree-row:hover { background: var(--paper-3); }
+    .tree-row.active { background: var(--ink); color: var(--paper); }
+    .tree-toggle {
+      width: 16px; height: 16px; border: 0; background: transparent; cursor: pointer;
+      display: grid; place-items: center; font-size: 9px; color: inherit; padding: 0;
+    }
+    .tree-icon { flex: none; display: grid; place-items: center; width: 18px; height: 18px; font-size: 14px; }
+    .tree-title { flex: 1; font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Reader Main */
+    .main { flex: 1; height: 100%; overflow-y: auto; display: flex; flex-direction: column; position: relative; }
+    .topbar {
+      position: sticky; top: 0; z-index: 30; background: var(--paper); border-bottom: 1.5px solid color-mix(in srgb, var(--ink) 15%, transparent);
+      padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px);
+    }
+    .nav-left { display: flex; align-items: center; gap: 12px; }
+    .menu-toggle { display: none; }
+    .breadcrumb { font: 500 12.5px var(--font-mono); color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .bc-item { cursor: pointer; color: var(--muted); text-decoration: none; }
+    .bc-item:hover { color: var(--ink); text-decoration: underline; }
+    .bc-sep { opacity: 0.5; }
+    .bc-cur { color: var(--ink); font-weight: 600; }
+
+    .content-canvas { max-width: 860px; width: 100%; margin: 0 auto; padding: 0 32px 80px; flex: 1; }
+    
+    /* Cover & Header */
+    .cover-wrap { width: 100%; height: 220px; overflow: hidden; margin-bottom: 24px; border-bottom: var(--border); }
+    .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .note-header { position: relative; margin-bottom: 32px; padding-top: 16px; }
+    .has-cover .note-header { margin-top: -60px; }
+    .page-icon {
+      width: 72px; height: 72px; background: var(--paper); border: var(--border); box-shadow: var(--shadow);
+      display: grid; place-items: center; margin-bottom: 16px; border-radius: 4px;
+    }
+    .page-title { font-family: var(--font-pixel); font-size: 36px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
+
+    /* Blocks Formatting */
+    .nb-doc { display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.65; }
+    .nb-h1 { font-family: var(--font-pixel); font-size: 28px; font-weight: 700; margin-top: 24px; margin-bottom: 4px; line-height: 1.25; }
+    .nb-h2 { font-family: var(--font-pixel); font-size: 22px; font-weight: 700; margin-top: 18px; margin-bottom: 4px; line-height: 1.3; }
+    .nb-h3 { font-family: var(--font-pixel); font-size: 18px; font-weight: 700; margin-top: 14px; margin-bottom: 2px; }
+    .nb-p { margin: 2px 0; }
+    
+    .nb-ul, .nb-ol { display: flex; align-items: flex-start; gap: 10px; margin: 3px 0; }
+    .nb-bullet { flex: none; width: 6px; height: 6px; background: var(--ink); border-radius: 50%; margin-top: 9px; }
+    .nb-num { flex: none; font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--muted); min-width: 20px; margin-top: 2px; }
+
+    .nb-todo { display: flex; align-items: flex-start; gap: 10px; margin: 3px 0; }
+    .nb-check {
+      flex: none; width: 17px; height: 17px; border: 2px solid var(--ink); border-radius: 3px;
+      display: grid; place-items: center; cursor: pointer; margin-top: 4px; background: var(--paper);
+    }
+    .nb-todo.done .nb-check { background: var(--clay); border-color: var(--clay); color: #fff; }
+    .nb-todo.done .nb-check::after { content: "✓"; font-size: 12px; font-weight: 800; line-height: 1; }
+    .nb-todo.done .nb-todo-text { text-decoration: line-through; color: var(--muted); }
+
+    .nb-quote { border-left: 3px solid var(--clay); padding: 4px 0 4px 16px; font-style: italic; color: var(--ink); margin: 6px 0; }
+    .nb-callout {
+      background: var(--paper-2); border: var(--border); box-shadow: var(--shadow);
+      padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; margin: 8px 0; border-radius: 3px;
+    }
+    .nb-callout-icon { flex: none; width: 22px; height: 22px; background: var(--clay); color: #fff; display: grid; place-items: center; font: 700 13px/1 var(--font-mono); border-radius: 2px; }
+
+    .nb-hr { border: 0; border-top: 2px dashed var(--muted); margin: 20px 0; opacity: 0.6; }
+
+    /* Code block */
+    .nb-code-box { border: var(--border); box-shadow: var(--shadow); margin: 10px 0; border-radius: 3px; overflow: hidden; }
+    .nb-code-bar {
+      background: var(--paper-2); border-bottom: var(--border); padding: 4px 12px;
+      display: flex; align-items: center; justify-content: space-between; font: 600 11.5px var(--font-mono); color: var(--muted);
+    }
+    .nb-copy-btn { border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 2px; }
+    .nb-copy-btn:hover { background: var(--ink); color: var(--paper); }
+    .nb-code-pre { background: var(--ink); color: var(--paper); padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.5; margin: 0; }
+
+    /* Web Bookmark (Notion style) */
+    .nb-bookmark-card {
+      display: flex; justify-content: space-between; border: var(--border); box-shadow: var(--shadow);
+      background: var(--paper-2); border-radius: 3px; overflow: hidden; text-decoration: none; color: inherit;
+      margin: 10px 0; transition: transform .12s, box-shadow .12s;
+    }
+    .nb-bookmark-card:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+    .nb-bm-content { flex: 1; min-width: 0; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+    .nb-bm-title { font-weight: 600; font-size: 15px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nb-bm-desc { font-size: 13px; line-height: 1.45; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .nb-bm-meta { display: flex; align-items: center; gap: 8px; font: 500 11.5px var(--font-mono); color: var(--muted); margin-top: 4px; }
+    .nb-bm-icon { width: 16px; height: 16px; border-radius: 2px; flex: none; object-fit: contain; }
+    .nb-bm-host { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nb-bm-thumb { flex: none; width: 200px; max-width: 35%; border-left: var(--border); background: var(--paper-3); overflow: hidden; }
+    .nb-bm-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* Embed iframe */
+    .nb-embed-wrap { border: var(--border); box-shadow: var(--shadow); background: var(--paper-2); border-radius: 3px; overflow: hidden; margin: 12px 0; }
+    .nb-embed-frame-wrap { position: relative; width: 100%; padding-top: 56.25%; background: #000; }
+    .nb-embed-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .nb-embed-bar { padding: 6px 12px; border-top: var(--border); display: flex; justify-content: flex-end; background: var(--paper); font: 500 11.5px var(--font-mono); }
+    .nb-embed-link { color: var(--clay); text-decoration: none; font-weight: 600; }
+    .nb-embed-link:hover { text-decoration: underline; }
+
+    /* Image Block */
+    .nb-img-fig { margin: 12px 0; max-width: 100%; }
+    .nb-img-fig img { max-width: 100%; height: auto; border: var(--border); border-radius: 3px; display: block; background: var(--paper-2); }
+    .nb-img-cap { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+    /* Inline */
+    a { color: var(--clay); text-decoration: underline; }
+    code { font-family: var(--font-mono); font-size: 0.9em; background: var(--paper-2); border: 1px solid var(--border); padding: 1px 4px; border-radius: 2px; }
+    mark { background: color-mix(in srgb, var(--clay) 25%, var(--paper)); color: inherit; padding: 1px 3px; }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .menu-toggle { display: inline-flex; }
+      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; transform: translateX(-100%); width: 85vw; max-width: 320px; box-shadow: 4px 0 0 var(--ink); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 45; display: none; }
+      .sidebar.open + .sidebar-backdrop { display: block; }
+      .content-canvas { padding: 0 16px 60px; }
+      .page-title { font-size: 28px; }
+      .nb-bm-thumb { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <span class="brand">NOTES</span>
+        <div class="side-acts">
+          <button type="button" class="icon-btn" id="themeBtn" title="Toggle dark mode">Theme</button>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="search" class="search-in" id="searchIn" placeholder="Search notes..." autocomplete="off">
+      </div>
+      <ul class="tree" id="noteTree"></ul>
+    </aside>
+    <div class="sidebar-backdrop" id="backdrop"></div>
+
+    <main class="main" id="main">
+      <header class="topbar">
+        <div class="nav-left">
+          <button type="button" class="icon-btn menu-toggle" id="menuBtn">☰ Menu</button>
+          <nav class="breadcrumb" id="breadcrumb"></nav>
+        </div>
+      </header>
+
+      <article class="content-canvas" id="canvas">
+        <div id="coverBox" class="cover-wrap" style="display:none;"></div>
+        <div class="note-header" id="noteHeader">
+          <div class="page-icon" id="pageIcon">📝</div>
+          <h1 class="page-title" id="pageTitle">Untitled</h1>
+        </div>
+        <div class="nb-doc" id="blocksBody"></div>
+      </article>
+    </main>
+  </div>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+
+    let notes = [];
+    let currentId = null;
+
+    // Theme toggle
+    const themeBtn = $('themeBtn');
+    if (localStorage.getItem('notes-theme') === 'dark') document.body.classList.add('dark');
+    themeBtn.onclick = () => {
+      const isDark = document.body.classList.toggle('dark');
+      localStorage.setItem('notes-theme', isDark ? 'dark' : 'light');
+    };
+
+    // Mobile sidebar toggle
+    const menuBtn = $('menuBtn');
+    const sidebar = $('sidebar');
+    const backdrop = $('backdrop');
+    const toggleMenu = (open) => sidebar.classList.toggle('open', open);
+    menuBtn.onclick = () => toggleMenu(true);
+    backdrop.onclick = () => toggleMenu(false);
+
+    // Load data
+    async function init() {
+      try {
+        const res = await fetch('notes.json');
+        notes = await res.json();
+        renderTree();
+        
+        // Deep linking via hash
+        const hashId = location.hash.replace(/^#/, '');
+        const target = notes.find(n => n.id === hashId) || notes[0];
+        if (target) selectNote(target.id);
+      } catch (err) {
+        $('blocksBody').innerHTML = `<p style="color:var(--clay);">Failed to load notes: ${err.message}</p>`;
+      }
+    }
+
+    // Tree Rendering
+    function renderTree(filter = '') {
+      const tree = $('noteTree');
+      tree.innerHTML = '';
+      const q = filter.trim().toLowerCase();
+      
+      const filtered = q
+        ? notes.filter(n => n.title.toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q))
+        : notes;
+
+      filtered.forEach(note => {
+        const li = document.createElement('li');
+        li.className = 'tree-item';
+        
+        const row = document.createElement('div');
+        row.className = `tree-row ${note.id === currentId ? 'active' : ''}`;
+        row.onclick = () => { selectNote(note.id); toggleMenu(false); };
+
+        const iconEl = document.createElement('span');
+        iconEl.className = 'tree-icon';
+        if (note.icon?.startsWith('em:')) {
+          const em = document.createElement('i');
+          em.className = 'em';
+          em.dataset.emote = note.icon.slice(3);
+          em.dataset.size = 'sm';
+          iconEl.append(em);
+        } else {
+          iconEl.textContent = note.icon || '📄';
+        }
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'tree-title';
+        titleEl.textContent = note.title || 'Untitled';
+
+        row.append(iconEl, titleEl);
+        li.append(row);
+        tree.append(li);
+      });
+    }
+
+    $('searchIn').oninput = (e) => renderTree(e.target.value);
+
+    // Select Note
+    function selectNote(id) {
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+      currentId = id;
+      location.hash = id;
+      document.title = `${note.title || 'Untitled'} · Arya Refman Notes`;
+
+      // Update tree active
+      document.querySelectorAll('.tree-row').forEach(r => r.classList.remove('active'));
+      renderTree($('searchIn').value);
+
+      // Breadcrumb
+      updateBreadcrumb(note);
+
+      // Cover
+      const coverBox = $('coverBox');
+      const canvas = $('canvas');
+      if (note.cover) {
+        coverBox.style.display = 'block';
+        coverBox.innerHTML = `<img src="${note.cover}" alt="">`;
+        canvas.classList.add('has-cover');
+      } else {
+        coverBox.style.display = 'none';
+        coverBox.innerHTML = '';
+        canvas.classList.remove('has-cover');
+      }
+
+      // Page Icon
+      const iconBox = $('pageIcon');
+      if (note.icon?.startsWith('em:')) {
+        iconBox.innerHTML = `<i class="em" data-emote="${note.icon.slice(3)}" data-size="lg"></i>`;
+      } else {
+        iconBox.textContent = note.icon || '📝';
+      }
+
+      // Title
+      $('pageTitle').textContent = note.title || 'Untitled';
+
+      // Blocks
+      renderBlocks(note.blocks || []);
+      $('main').scrollTop = 0;
+    }
+
+    function updateBreadcrumb(note) {
+      const bc = $('breadcrumb');
+      bc.innerHTML = '';
+      const parts = [];
+      let cur = note;
+      while (cur) {
+        parts.unshift(cur);
+        cur = cur.parent ? notes.find(n => n.id === cur.parent) : null;
+      }
+
+      parts.forEach((p, i) => {
+        if (i > 0) {
+          const sep = document.createElement('span');
+          sep.className = 'bc-sep';
+          sep.textContent = '/';
+          bc.append(sep);
+        }
+        const item = document.createElement('span');
+        if (i === parts.length - 1) {
+          item.className = 'bc-cur';
+          item.textContent = p.title || 'Untitled';
+        } else {
+          item.className = 'bc-item';
+          item.textContent = p.title || 'Untitled';
+          item.onclick = () => selectNote(p.id);
+        }
+        bc.append(item);
+      });
+    }
+
+    // Render Blocks
+    function renderBlocks(blocks) {
+      const body = $('blocksBody');
+      body.innerHTML = '';
+
+      blocks.forEach(b => {
+        const el = document.createElement('div');
+        el.className = `nb-${b.type}`;
+
+        switch (b.type) {
+          case 'h1': el.innerHTML = b.text; break;
+          case 'h2': el.innerHTML = b.text; break;
+          case 'h3': el.innerHTML = b.text; break;
+          case 'p': el.innerHTML = b.text || '&nbsp;'; break;
+          case 'ul':
+            el.innerHTML = `<span class="nb-bullet" aria-hidden="true"></span><div>${b.text}</div>`;
+            break;
+          case 'ol':
+            el.innerHTML = `<span class="nb-num">${b.indent ? '' : '1.'}</span><div>${b.text}</div>`;
+            break;
+          case 'todo':
+            const check = document.createElement('span');
+            check.className = 'nb-check';
+            check.onclick = () => { el.classList.toggle('done'); };
+            const txt = document.createElement('div');
+            txt.className = 'nb-todo-text';
+            txt.innerHTML = b.text;
+            if (b.checked) el.classList.add('done');
+            el.append(check, txt);
+            break;
+          case 'quote': el.innerHTML = b.text; break;
+          case 'callout':
+            el.innerHTML = `<span class="nb-callout-icon">!</span><div>${b.text}</div>`;
+            break;
+          case 'divider':
+            el.className = 'nb-hr';
+            break;
+          case 'code':
+            const box = document.createElement('div');
+            box.className = 'nb-code-box';
+            const bar = document.createElement('div');
+            bar.className = 'nb-code-bar';
+            bar.innerHTML = `<span>${b.lang || 'Code'}</span><button type="button" class="nb-copy-btn">Copy</button>`;
+            const pre = document.createElement('pre');
+            pre.className = 'nb-code-pre';
+            pre.textContent = b.text;
+            bar.querySelector('.nb-copy-btn').onclick = async (e) => {
+              await navigator.clipboard.writeText(b.text);
+              e.target.textContent = 'Copied!';
+              setTimeout(() => { e.target.textContent = 'Copy'; }, 1500);
+            };
+            box.append(bar, pre);
+            el.append(box);
+            break;
+          case 'image':
+            const fig = document.createElement('figure');
+            fig.className = 'nb-img-fig';
+            fig.innerHTML = `<img src="${b.src}" alt="${b.text || ''}" loading="lazy">${b.text ? `<figcaption class="nb-img-cap">${b.text}</figcaption>` : ''}`;
+            el.append(fig);
+            break;
+          case 'bookmark':
+            if (!b.url) break;
+            const host = (() => { try { return new URL(b.url).hostname.replace(/^www\./, ''); } catch { return b.url; } })();
+            const card = document.createElement('a');
+            card.className = 'nb-bookmark-card';
+            card.href = b.url;
+            card.target = '_blank';
+            card.rel = 'noopener noreferrer';
+            card.innerHTML = `
+              <div class="nb-bm-content">
+                <div class="nb-bm-title">${b.title || b.url}</div>
+                ${b.description ? `<div class="nb-bm-desc">${b.description}</div>` : ''}
+                <div class="nb-bm-meta">
+                  ${b.icon ? `<img src="${b.icon}" class="nb-bm-icon" alt="" onerror="this.remove()">` : ''}
+                  <span class="nb-bm-host">${host}</span>
+                </div>
+              </div>
+              ${b.image ? `<div class="nb-bm-thumb"><img src="${b.image}" alt="" onerror="this.parentElement.remove()" loading="lazy"></div>` : ''}
+            `;
+            el.append(card);
+            break;
+          case 'embed':
+            if (!b.url) break;
+            const embedWrap = document.createElement('div');
+            embedWrap.className = 'nb-embed-wrap';
+            embedWrap.innerHTML = `
+              <div class="nb-embed-frame-wrap">
+                <iframe class="nb-embed-frame" src="${b.url}" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" allowfullscreen loading="lazy"></iframe>
+              </div>
+              <div class="nb-embed-bar">
+                <a href="${b.url}" target="_blank" rel="noopener noreferrer" class="nb-embed-link">↗ Open original</a>
+              </div>
+            `;
+            el.append(embedWrap);
+            break;
+          default:
+            el.innerHTML = b.text || '';
+        }
+
+        body.append(el);
+      });
+    }
+
+    window.addEventListener('hashchange', () => {
+      const hashId = location.hash.replace(/^#/, '');
+      if (hashId && hashId !== currentId) selectNote(hashId);
+    });
+
+    init();
+  </script>
+</body>
+</html>
