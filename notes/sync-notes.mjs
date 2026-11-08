@@ -5,7 +5,9 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projects = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'projects.json'), 'utf8'));
+const only = process.argv.includes('--project') ? process.argv[process.argv.indexOf('--project') + 1] : null; // --project <id>: sync that project only
+const projects = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'projects.json'), 'utf8')).filter((p) => !only || p.id === only);
+if (only && !projects.length) { console.error(`Unknown project: ${only}`); process.exit(1); }
 const envId = (id) => id.toUpperCase().replace(/[^A-Z0-9]/g, '_');
 const b64 = (b) => b.toString('base64');
 const iter = 600000;
@@ -17,6 +19,29 @@ function sourceDirFor(id) {
   if (e) return e;
   if (id === 'gdgoc-itb') return process.env.NOTES_SOURCE_DIR || path.join(os.homedir(), 'GDGOC-ITB', '.claude', 'agent-office');
   return null; // no source configured: published as an empty locked collection
+}
+
+// True when the published files already hold exactly this plaintext (and images), so a rerun leaves them untouched
+// instead of re-encrypting with a fresh salt and making a pointless git change.
+function upToDate(p, dataFile, password, plain, src, names) {
+  try {
+    const d = JSON.parse(fs.readFileSync(path.join(__dirname, dataFile), 'utf8'));
+    const key = crypto.pbkdf2Sync(password, Buffer.from(d.salt, 'base64'), d.iter, 32, 'sha256');
+    const open = (iv, buf) => {
+      const c = crypto.createDecipheriv('aes-256-gcm', key, iv);
+      c.setAuthTag(buf.subarray(-16));
+      return Buffer.concat([c.update(buf.subarray(0, -16)), c.final()]);
+    };
+    if (open(Buffer.from(d.iv, 'base64'), Buffer.from(d.ct, 'base64')).toString('utf8') !== plain) return false;
+    const have = names.filter((n) => src && fs.existsSync(path.join(src, 'notes-img', n)));
+    const dir = path.join(__dirname, 'images', p.id);
+    const onDisk = fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];
+    if (JSON.stringify(onDisk) !== JSON.stringify(have.map((n) => n + '.enc').sort())) return false;
+    return have.every((n) => {
+      const e = fs.readFileSync(path.join(dir, n + '.enc'));
+      return open(e.subarray(0, 12), e.subarray(12)).equals(fs.readFileSync(path.join(src, 'notes-img', n)));
+    });
+  } catch { return false; }
 }
 
 const gcm = (key, data) => {
@@ -46,10 +71,12 @@ for (const p of projects) {
   const names = [...new Set([...raw.matchAll(/\/api\/notes\/images\/([A-Za-z0-9._-]+)/g)].map((m) => m[1]))];
   const plain = raw.replaceAll('/api/notes/images/', 'images/');
 
+  const dataFile = p.dataFile || `data/${p.id}.json`;
+  if (upToDate(p, dataFile, password, plain, src, names)) { console.log(`= ${p.id}: unchanged`); continue; }
+
   const salt = crypto.randomBytes(16);
   const key = crypto.pbkdf2Sync(password, salt, iter, 32, 'sha256');
   const { iv, ct } = gcm(key, Buffer.from(plain, 'utf8'));
-  const dataFile = p.dataFile || `data/${p.id}.json`;
   fs.mkdirSync(path.join(__dirname, path.dirname(dataFile)), { recursive: true });
   fs.writeFileSync(path.join(__dirname, dataFile), JSON.stringify({ v: 1, kdf: 'PBKDF2-SHA256', iter, salt: b64(salt), iv: b64(iv), ct: b64(ct) }), 'utf8');
 
