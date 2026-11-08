@@ -439,7 +439,7 @@
           if (!key) throw new Error('nokey');
           const ck = proj.id + '/' + name;
           if (!imgCache.has(ck)) imgCache.set(ck, (async () => {
-            const res = await fetch(`images/${proj.id}/${name}.enc`);
+            const res = await fetch(`images/${proj.id}/${name}.enc`, { cache: 'no-cache' }); // sync re-keys every .enc at the same URL: revalidate so a stale cached copy cannot fail the GCM check
             if (!res.ok) throw new Error('img');
             const buf = new Uint8Array(await res.arrayBuffer());
             const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
