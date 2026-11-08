@@ -212,7 +212,7 @@
     .r-bc-cur { color: var(--ink); font-weight: 600; }
 
     .reader-canvas { max-width: 860px; width: 100%; margin: 0 auto; padding: 0 32px 80px; }
-    .cover-box { width: 100%; height: 220px; overflow: hidden; margin-bottom: 24px; border-bottom: var(--border); }
+    .cover-box { width: 100%; height: 260px; overflow: hidden; border-bottom: var(--border); }
     .cover-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .has-cover .reader-header { margin-top: -60px; }
     .reader-header { position: relative; margin-bottom: 32px; padding-top: 16px; }
@@ -380,9 +380,9 @@
             <nav class="r-breadcrumb" id="rBreadcrumb"></nav>
           </div>
         </header>
+        <div id="coverBox" class="cover-box" style="display:none;"></div>
 
         <article class="reader-canvas" id="readerCanvas">
-          <div id="coverBox" class="cover-box" style="display:none;"></div>
           <div class="reader-header" id="rHeader">
             <div class="page-icon-badge" id="rPageIcon">📝</div>
             <h1 class="reader-title" id="rTitle">Untitled</h1>
