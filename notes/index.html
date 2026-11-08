@@ -402,6 +402,7 @@
       </div>
       <p class="pass-desc" id="passDialogDesc">This collection is password-protected. Enter the password to unlock.</p>
       <input type="password" class="pass-input" id="passInput" placeholder="Enter password..." required autofocus>
+      <label style="display:block;margin:8px 0;font-size:13px"><input type="checkbox" id="passRemember"> Remember on this device (stores a decryption key in this browser)</label>
       <div class="pass-err" id="passErr">Password salah. Silakan coba lagi.</div>
       <div class="pass-actions">
         <button type="button" class="btn" id="passCancelBtn">Cancel</button>
@@ -418,12 +419,78 @@
     const $ = (id) => document.getElementById(id);
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-    // SHA-256 helper
-    async function sha256(text) {
-      const buffer = new TextEncoder().encode(text);
-      const hash = await crypto.subtle.digest('SHA-256', buffer);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    // URL allowlist: relative paths and http(s) only (blocks javascript:, data:, etc.)
+    // blob: is allowed only for URLs minted by our own image decrypt (ownBlobs), and only ever set on <img>
+    const ownBlobs = new Set();
+    const safeUrl = (u) => {
+      try {
+        if (ownBlobs.has(String(u))) return String(u);
+        const x = new URL(String(u ?? ''), location.href); return /^https?:$/.test(x.protocol) ? String(u) : '';
+      } catch { return ''; }
+    };
+    // protected images: notes reference images/<name>; the file is images/<project>/<name>.enc (iv12 || AES-GCM ciphertext)
+    const encName = (u) => { const m = /^images\/([A-Za-z0-9._-]+)$/.exec(String(u ?? '')); return m ? m[1] : ''; };
+    const imgCache = new Map();
+    async function hydrateImages(root) {
+      const proj = currentProject, key = proj && imageKeys.get(proj.id);
+      for (const img of root.querySelectorAll('img[data-enc]')) {
+        const name = img.dataset.enc;
+        try {
+          if (!key) throw new Error('nokey');
+          const ck = proj.id + '/' + name;
+          if (!imgCache.has(ck)) imgCache.set(ck, (async () => {
+            const res = await fetch(`images/${proj.id}/${name}.enc`);
+            if (!res.ok) throw new Error('img');
+            const buf = new Uint8Array(await res.arrayBuffer());
+            const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+            const type = /\.png$/i.test(name) ? 'image/png' : /\.jpe?g$/i.test(name) ? 'image/jpeg' : /\.gif$/i.test(name) ? 'image/gif' : /\.webp$/i.test(name) ? 'image/webp' : 'application/octet-stream';
+            const url = URL.createObjectURL(new Blob([pt], { type }));
+            ownBlobs.add(url);
+            return url;
+          })());
+          img.src = safeUrl(await imgCache.get(ck));
+        } catch { imgCache.delete(proj?.id + '/' + name); img.alt = img.alt || 'Image unavailable'; }
+      }
     }
+    // Minimal HTML sanitizer for note text: drops active elements, on* handlers and unsafe URLs
+    function clean(html) {
+      const doc = new DOMParser().parseFromString(String(html ?? ''), 'text/html');
+      doc.querySelectorAll('script,style,iframe,object,embed,link,meta,base,form,svg,math').forEach(n => n.remove());
+      doc.body.querySelectorAll('*').forEach(n => {
+        for (const a of [...n.attributes]) {
+          const k = a.name.toLowerCase();
+          if (k.startsWith('on') || k === 'style' || k === 'srcdoc' || k === 'formaction') n.removeAttribute(a.name);
+          else if ((k === 'href' || k === 'src') && !safeUrl(a.value)) n.removeAttribute(a.name);
+        }
+        if (n.tagName === 'IMG' && encName(n.getAttribute('src'))) { n.dataset.enc = encName(n.getAttribute('src')); n.removeAttribute('src'); }
+        if (n.tagName === 'A') n.setAttribute('rel', 'noopener noreferrer');
+      });
+      return doc.body.innerHTML;
+    }
+
+    // Real protection: notes JSON is AES-256-GCM ciphertext (PBKDF2-SHA256 key). Wrong password = GCM auth failure.
+    const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+    async function fetchEnvelope(proj) {
+      const res = await fetch(proj.dataFile || `data/${proj.id}.json`);
+      if (!res.ok) throw new Error('load');
+      return res.json();
+    }
+    async function deriveKey(password, env, extractable) {
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64d(env.salt), iterations: env.iter, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, extractable, ['decrypt']);
+    }
+    async function decryptNotes(env, key) {
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(env.iv) }, key, b64d(env.ct));
+      return JSON.parse(new TextDecoder().decode(pt));
+    }
+    // decrypted notes live in memory only
+    const decrypted = new Map();
+    const imageKeys = new Map(); // project id -> CryptoKey (memory only), also decrypts that project's images
+    const keyStore = (id) => `notes_key_${id}`;
+    const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+    const lsDel = (k) => { try { localStorage.removeItem(k); } catch {} };
 
     // State
     let projects = [];
@@ -452,6 +519,7 @@
     async function loadHub() {
       try {
         const res = await fetch('data/projects.json');
+        if (!res.ok) throw new Error(res.status);
         projects = await res.json();
       } catch {
         projects = [
@@ -459,7 +527,7 @@
             id: "gdgoc-itb", url: "#gdgoc-itb", name: "GDGoC ITB 2026",
             floor: 5, theme: "cabin", busy: 1, connected: true, agents: 3, repos: 1,
             desc: "Hackathon notes, persiapan overseas, pembagian abstrak & riset",
-            passwordHash: "ea456ee52c2df3b784c50efdbe0dd69faf84f1fc63a61e8948b2113b392baa2f",
+            encrypted: true,
             dataFile: "data/gdgoc-itb.json"
           }
         ];
@@ -510,7 +578,7 @@
 
       sorted.forEach((p, idx) => {
         const th = themeById(p.theme);
-        const isUnlocked = !p.passwordHash || localStorage.getItem(`unlocked_notes_${p.id}`) === 'true';
+        const isUnlocked = decrypted.has(p.id);
         const number = p.floor || (sorted.length - idx);
 
         const li = document.createElement('li');
@@ -519,7 +587,7 @@
         li.dataset.url = p.url;
 
         li.innerHTML = `
-          <a href="${p.url}" style="--f0:${esc(th.swatch[0])};--f2:${esc(th.swatch[2])}">
+          <a href="${esc(p.url)}" style="--f0:${esc(th.swatch[0])};--f2:${esc(th.swatch[2])}">
             <span class="fl"><b>${number}</b></span>
             <div class="info">
               <h2>
@@ -532,9 +600,7 @@
                 <span class="stat ${p.busy ? 'busy' : ''}">${p.busy ? `${p.busy} working` : 'all idle'}</span>
                 <span class="stat ${p.connected ? 'ok' : 'wait'}">${p.connected ? 'connected' : 'no session'}</span>
                 <span class="stat">${esc(th.name)}</span>
-                ${p.passwordHash
-                  ? `<span class="stat ${isUnlocked ? 'unlocked' : 'locked'}">${isUnlocked ? 'Unlocked ✓' : 'Password protected'}</span>`
-                  : '<span class="stat">Public</span>'}
+                <span class="stat ${isUnlocked ? 'unlocked' : 'locked'}">${isUnlocked ? 'Unlocked ✓' : 'Locked'}</span>
               </span>
               <span class="open">Open notes →</span>
             </div>
@@ -554,19 +620,25 @@
 
     // Attempt Open Project with Password Guard
     async function attemptOpenProject(proj, targetNoteId = null) {
-      const isUnlocked = !proj.passwordHash || localStorage.getItem(`unlocked_notes_${proj.id}`) === 'true';
-      if (isUnlocked) {
-        openProjectReader(proj, targetNoteId);
-      } else {
-        // Show password dialog
-        pendingUnlockProject = { proj, targetNoteId };
-        $('passDialogTitle').textContent = `Password: ${proj.name}`;
-        $('passDialogDesc').textContent = `Collection "${proj.name}" is password-protected. Enter password to view.`;
-        $('passInput').value = '';
-        $('passErr').style.display = 'none';
-        $('passModal').hidden = false;
-        setTimeout(() => $('passInput').focus(), 50);
+      if (decrypted.has(proj.id)) return openProjectReader(proj, targetNoteId);
+      // optional "remember on this device": a saved raw key, never the password
+      const saved = lsGet(keyStore(proj.id));
+      if (saved) {
+        try {
+          const key = await crypto.subtle.importKey('raw', b64d(saved), 'AES-GCM', false, ['decrypt']);
+          decrypted.set(proj.id, await decryptNotes(await fetchEnvelope(proj), key));
+          imageKeys.set(proj.id, key);
+          renderFloors();
+          return openProjectReader(proj, targetNoteId);
+        } catch { lsDel(keyStore(proj.id)); }
       }
+      pendingUnlockProject = { proj, targetNoteId };
+      $('passDialogTitle').textContent = `Password: ${proj.name}`;
+      $('passDialogDesc').textContent = `Collection "${proj.name}" is password-protected. Enter password to view.`;
+      $('passInput').value = '';
+      $('passErr').style.display = 'none';
+      $('passModal').hidden = false;
+      setTimeout(() => $('passInput').focus(), 50);
     }
 
     // Password Form Submit
@@ -575,15 +647,19 @@
       if (!pendingUnlockProject) return;
       const { proj, targetNoteId } = pendingUnlockProject;
       const entered = $('passInput').value;
-      const hashed = await sha256(entered);
-
-      if (hashed === proj.passwordHash) {
-        // Remember password in localStorage so never asked again!
-        localStorage.setItem(`unlocked_notes_${proj.id}`, 'true');
+      const remember = $('passRemember').checked;
+      try {
+        const env = await fetchEnvelope(proj);
+        const key = await deriveKey(entered, env, remember);
+        decrypted.set(proj.id, await decryptNotes(env, key));
+        imageKeys.set(proj.id, key);
+        if (remember) lsSet(keyStore(proj.id), btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey('raw', key)))));
         $('passModal').hidden = true;
+        pendingUnlockProject = null;
         renderFloors(); // update chip
         openProjectReader(proj, targetNoteId);
-      } else {
+      } catch (err) {
+        $('passErr').textContent = err.message === 'load' ? 'Notes data not found. Run sync and push.' : 'Wrong password. Try again.';
         $('passErr').style.display = 'block';
         $('passInput').select();
       }
@@ -597,10 +673,9 @@
       $('readerView').style.display = 'block';
       $('sideProjName').textContent = proj.name;
 
+      tower?.setActive(false);
       try {
-        const file = proj.dataFile || `data/${proj.id}.json`;
-        const res = await fetch(file);
-        currentNotes = await res.json();
+        currentNotes = decrypted.get(proj.id) || [];
       } catch (err) {
         currentNotes = [];
       }
@@ -608,9 +683,8 @@
       renderHierarchicalTree();
 
       // Open target note or first note
-      const noteToOpen = targetNoteId
-        ? currentNotes.find(n => n.id === targetNoteId)
-        : currentNotes.find(n => !n.parent) || currentNotes[0];
+      const noteToOpen = (targetNoteId && currentNotes.find(n => n.id === targetNoteId))
+        || currentNotes.find(n => !n.parent) || currentNotes[0];
 
       if (noteToOpen) selectNote(noteToOpen.id);
     }
@@ -620,6 +694,7 @@
       $('readerView').style.display = 'none';
       $('hubView').style.display = 'block';
       currentProject = null;
+      tower?.setActive(true);
       location.hash = '';
       document.title = 'Notes · Arya Refman';
     };
@@ -633,9 +708,11 @@
       const q = filter.trim().toLowerCase();
 
       // Map parent -> children
+      const ids = new Set(currentNotes.map(n => n.id));
       const byParent = new Map();
       currentNotes.forEach(n => {
-        const pid = n.parent || null;
+        // missing parent -> treat as root so the note is not lost
+        const pid = (n.parent && ids.has(n.parent) && n.parent !== n.id) ? n.parent : null;
         if (!byParent.has(pid)) byParent.set(pid, []);
         byParent.get(pid).push(n);
       });
@@ -658,9 +735,12 @@
       }
 
       // Recursive tree builder
+      const seen = new Set(); // cycle guard
       function buildBranch(parentId, container) {
         const children = byParent.get(parentId) || [];
         children.forEach(note => {
+          if (seen.has(note.id)) return;
+          seen.add(note.id);
           const hasKids = byParent.has(note.id) && byParent.get(note.id).length > 0;
           const isFolded = foldedParents.has(note.id);
 
@@ -711,6 +791,8 @@
 
       // Root level (parent is null)
       buildBranch(null, tree);
+      // notes only reachable through a parent cycle: show them at root
+      currentNotes.filter(n => !seen.has(n.id)).forEach(n => { byParent.set(null, [n]); buildBranch(null, tree); });
     }
 
     $('sideSearchIn').oninput = (e) => renderHierarchicalTree(e.target.value);
@@ -739,9 +821,10 @@
       // Cover banner
       const coverBox = $('coverBox');
       const canvas = $('readerCanvas');
-      if (note.cover) {
+      if (encName(note.cover) || safeUrl(note.cover)) {
         coverBox.style.display = 'block';
-        coverBox.innerHTML = `<img src="${note.cover}" alt="">`;
+        coverBox.innerHTML = encName(note.cover) ? `<img data-enc="${esc(encName(note.cover))}" alt="">` : `<img src="${esc(note.cover)}" alt="">`;
+        hydrateImages(coverBox);
         canvas.classList.add('has-cover');
       } else {
         coverBox.style.display = 'none';
@@ -764,7 +847,7 @@
       bc.innerHTML = '';
       const parts = [];
       let cur = note;
-      while (cur) {
+      while (cur && !parts.includes(cur)) {
         parts.unshift(cur);
         cur = cur.parent ? currentNotes.find(n => n.id === cur.parent) : null;
       }
@@ -812,15 +895,15 @@
         el.className = `nb-${b.type}`;
 
         switch (b.type) {
-          case 'h1': el.innerHTML = b.text; break;
-          case 'h2': el.innerHTML = b.text; break;
-          case 'h3': el.innerHTML = b.text; break;
-          case 'p': el.innerHTML = b.text || '&nbsp;'; break;
+          case 'h1': el.innerHTML = clean(b.text); break;
+          case 'h2': el.innerHTML = clean(b.text); break;
+          case 'h3': el.innerHTML = clean(b.text); break;
+          case 'p': el.innerHTML = clean(b.text) || '&nbsp;'; break;
           case 'ul':
-            el.innerHTML = `<span class="nb-bullet" aria-hidden="true"></span><div>${b.text}</div>`;
+            el.innerHTML = `<span class="nb-bullet" aria-hidden="true"></span><div>${clean(b.text)}</div>`;
             break;
           case 'ol':
-            el.innerHTML = `<span class="nb-num">${b.indent ? '' : '1.'}</span><div>${b.text}</div>`;
+            el.innerHTML = `<span class="nb-num">${b.indent ? '' : '1.'}</span><div>${clean(b.text)}</div>`;
             break;
           case 'todo':
             const check = document.createElement('span');
@@ -828,13 +911,13 @@
             check.onclick = () => el.classList.toggle('done');
             const txt = document.createElement('div');
             txt.className = 'nb-todo-text';
-            txt.innerHTML = b.text;
+            txt.innerHTML = clean(b.text);
             if (b.checked) el.classList.add('done');
             el.append(check, txt);
             break;
-          case 'quote': el.innerHTML = b.text; break;
+          case 'quote': el.innerHTML = clean(b.text); break;
           case 'callout':
-            el.innerHTML = `<span class="nb-callout-icon">!</span><div>${b.text}</div>`;
+            el.innerHTML = `<span class="nb-callout-icon">!</span><div>${clean(b.text)}</div>`;
             break;
           case 'divider': el.className = 'nb-hr'; break;
           case 'code':
@@ -842,7 +925,7 @@
             box.className = 'nb-code-box';
             const bar = document.createElement('div');
             bar.className = 'nb-code-bar';
-            bar.innerHTML = `<span>${b.lang || 'Code'}</span><button type="button" class="nb-copy-btn">Copy</button>`;
+            bar.innerHTML = `<span>${esc(b.lang || 'Code')}</span><button type="button" class="nb-copy-btn">Copy</button>`;
             const pre = document.createElement('pre');
             pre.className = 'nb-code-pre';
             pre.textContent = b.text;
@@ -858,17 +941,17 @@
             const fig = document.createElement('figure');
             fig.className = 'nb-img-fig';
             fig.innerHTML = `
-              <img src="${b.src}" alt="${esc(b.text || '')}" loading="lazy">
+              <img ${encName(b.src) ? `data-enc="${esc(encName(b.src))}"` : `src="${esc(safeUrl(b.src))}"`} alt="${esc(b.text || '')}" loading="lazy">
               ${b.text ? `<figcaption class="nb-img-cap">${esc(b.text)}</figcaption>` : ''}
             `;
             el.append(fig);
             break;
           case 'bookmark':
-            if (!b.url) break;
-            const host = (() => { try { return new URL(b.url).hostname.replace(/^www\./, ''); } catch { return b.url; } })();
+            if (!safeUrl(b.url)) break;
+            const host = (() => { try { return new URL(b.url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
             const card = document.createElement('a');
             card.className = 'nb-bookmark-card';
-            card.href = b.url;
+            card.href = safeUrl(b.url);
             card.target = '_blank';
             card.rel = 'noopener noreferrer';
             card.innerHTML = `
@@ -876,33 +959,35 @@
                 <div class="nb-bm-title">${esc(b.title || b.url)}</div>
                 ${b.description ? `<div class="nb-bm-desc">${esc(b.description)}</div>` : ''}
                 <div class="nb-bm-meta">
-                  ${b.icon ? `<img src="${b.icon}" class="nb-bm-icon" alt="" onerror="this.remove()">` : ''}
-                  <span class="nb-bm-host">${host}</span>
+                  ${safeUrl(b.icon) ? `<img src="${esc(safeUrl(b.icon))}" class="nb-bm-icon" alt="" onerror="this.remove()">` : ''}
+                  <span class="nb-bm-host">${esc(host)}</span>
                 </div>
               </div>
-              ${b.image ? `<div class="nb-bm-thumb"><img src="${b.image}" alt="" onerror="this.parentElement.remove()" loading="lazy"></div>` : ''}
+              ${safeUrl(b.image) ? `<div class="nb-bm-thumb"><img src="${esc(safeUrl(b.image))}" alt="" onerror="this.parentElement.remove()" loading="lazy"></div>` : ''}
             `;
             el.append(card);
             break;
           case 'embed':
-            if (!b.url) break;
+            // http(s) only, and never same-origin (allow-scripts + allow-same-origin would escape the sandbox)
+            if (!safeUrl(b.url) || new URL(b.url, location.href).origin === location.origin) break;
             const embedWrap = document.createElement('div');
             embedWrap.className = 'nb-embed-wrap';
             embedWrap.innerHTML = `
               <div class="nb-embed-frame-wrap">
-                <iframe class="nb-embed-frame" src="${b.url}" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" allowfullscreen loading="lazy"></iframe>
+                <iframe class="nb-embed-frame" src="${esc(b.url)}" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" allowfullscreen loading="lazy"></iframe>
               </div>
               <div class="nb-embed-bar">
-                <a href="${b.url}" target="_blank" rel="noopener noreferrer" class="nb-embed-link">↗ Open original</a>
+                <a href="${esc(b.url)}" target="_blank" rel="noopener noreferrer" class="nb-embed-link">↗ Open original</a>
               </div>
             `;
             el.append(embedWrap);
             break;
           default:
-            el.innerHTML = b.text || '';
+            el.innerHTML = clean(b.text);
         }
         container.append(el);
       });
+      hydrateImages(container);
     }
 
     loadHub();

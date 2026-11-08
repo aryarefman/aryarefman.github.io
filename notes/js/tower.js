@@ -474,8 +474,9 @@ export function createTower(host, { onOpen, onHover = () => {} }) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }).observe(host);
-  const run = () => { renderer.setAnimationLoop(document.hidden ? null : frame); last = performance.now(); };
+  let active = true;
+  const run = () => { renderer.setAnimationLoop(document.hidden || !active ? null : frame); last = performance.now(); };
   document.addEventListener('visibilitychange', run);
   run();
-  return { update, highlight: (url) => { forced = url; } };
+  return { update, highlight: (url) => { forced = url; }, setActive: (on) => { active = on; run(); } };
 }
