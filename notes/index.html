@@ -824,6 +824,10 @@
       if (encName(note.cover) || safeUrl(note.cover)) {
         coverBox.style.display = 'block';
         coverBox.innerHTML = encName(note.cover) ? `<img data-enc="${esc(encName(note.cover))}" alt="">` : `<img src="${esc(note.cover)}" alt="">`;
+        // coverPos "x% y%" -> object-position; strict match only, else the default centered crop (img is rebuilt each render, so no stale value)
+        const cImg = coverBox.firstElementChild;
+        const CP = '(100(\\.0{1,2})?|\\d{1,2}(\\.\\d{1,2})?)';
+        if (cImg && typeof note.coverPos === 'string' && new RegExp(`^${CP}% ${CP}%$`).test(note.coverPos)) cImg.style.objectPosition = note.coverPos;
         hydrateImages(coverBox);
         canvas.classList.add('has-cover');
       } else {
