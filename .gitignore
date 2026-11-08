@@ -5,6 +5,7 @@ needs-rig/
 _decimated_for_mixamo/
 node_modules/
 *.png
+!notes/images/**
 
 
 

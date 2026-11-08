@@ -2,26 +2,36 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Notes · Arya Refman</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+  
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.min.js",
+      "three/addons/controls/OrbitControls.js": "./vendor/three/addons/OrbitControls.js"
+    }
+  }
+  </script>
+
   <style>
     :root {
       --paper: #FAF6ED;
       --paper-2: #F0EAD6;
       --paper-3: #E6DFCA;
       --ink: #1B1712;
-      --clay: #D96838;
-      --muted: #7E7265;
+      --clay: #B4502B;
+      --muted: #66594D;
       --border: 2px solid var(--ink);
       --shadow: 3px 3px 0 var(--ink);
       --font-body: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
       --font-mono: 'Geist Mono', monospace;
       --font-pixel: 'Pixelify Sans', monospace;
       --em-sm: 18px;
-      --em-md: 28px;
+      --em-md: 26px;
       --em-lg: 48px;
     }
 
@@ -67,85 +77,160 @@
     [data-emote="offline"] { --em-src: url(clawd/e/offline.svg); }
     [data-emote="empty"] { --em-src: url(clawd/e/empty.svg); }
 
-    /* App Layout */
-    .app { display: flex; height: 100vh; overflow: hidden; }
+    /* Header matching offices.html */
+    .hub-header {
+      padding: 16px 28px; border-bottom: var(--border); display: flex; align-items: center; justify-content: space-between;
+      background: var(--paper); position: sticky; top: 0; z-index: 40;
+    }
+    .brand-group { display: flex; align-items: center; gap: 10px; }
+    .brand-text { font-family: var(--font-pixel); font-size: 20px; font-weight: 700; }
+    .hub-acts { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      background: var(--paper); border: var(--border); box-shadow: 2px 2px 0 var(--ink);
+      padding: 6px 12px; font: 600 12px var(--font-mono); color: var(--ink); cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px; border-radius: 2px;
+    }
+    .btn:hover { background: var(--paper-2); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+    .btn.primary { background: var(--ink); color: var(--paper); }
+    .btn.primary:hover { background: var(--clay); color: #fff; }
 
-    /* Sidebar */
-    .sidebar {
+    /* Hub View (Matching offices.html) */
+    #hubView { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .hub-intro { margin-bottom: 24px; }
+    .hub-label { font: 700 11.5px/1 var(--font-mono); color: var(--clay); text-transform: uppercase; letter-spacing: 0.5px; }
+    .hub-title { font-family: var(--font-pixel); font-size: 32px; font-weight: 700; margin: 4px 0 6px; }
+    .hub-sub { font: 400 13.5px/1.5 var(--font-mono); color: var(--muted); }
+
+    .site {
+      display: grid; grid-template-columns: minmax(320px, 1.25fr) minmax(320px, 460px);
+      justify-content: center; gap: 40px; align-items: start; margin-top: 8px; padding-bottom: 32px;
+    }
+    
+    /* 3D Tower Stage (Copied from offices.html) */
+    .tower3d { position: sticky; top: 76px; min-width: 0; }
+    .stage { position: relative; height: min(76vh, 650px); min-height: 400px; background: none; border: 0; overflow: visible; }
+    .stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    .tlabel {
+      position: absolute; z-index: 10; display: flex; flex-direction: column; gap: 3px; max-width: 240px;
+      padding: 7px 9px; border: var(--border); background: var(--paper); color: var(--ink);
+      font: 400 12px/1.3 var(--font-mono); pointer-events: none; box-shadow: 3px 3px 0 var(--ink);
+    }
+    .tlabel b { font: 600 14px/1.2 var(--font-pixel), var(--font-body); overflow-wrap: anywhere; }
+    .tlabel[hidden] { display: none; }
+    .thint { margin: 8px 0 0; font: 400 12px/1.5 var(--font-mono); color: var(--muted); text-align: center; }
+
+    /* Floor Stack (Exact offices.html structure, without local paths) */
+    .floors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .floor { position: relative; }
+    .floor a {
+      display: grid; grid-template-columns: 44px minmax(0, 1fr); text-decoration: none; color: var(--ink);
+      background: var(--paper-2); border: var(--border); transition: background .15s, box-shadow .15s;
+      border-radius: 2px; box-shadow: 2px 2px 0 var(--ink);
+    }
+    .floor.lit a, .floor a:hover {
+      background: var(--paper-3); outline: 3px solid var(--clay); outline-offset: 1px;
+      box-shadow: 4px 4px 0 var(--ink);
+    }
+    .fl {
+      display: flex; align-items: center; justify-content: center; background: var(--f0);
+      box-shadow: inset -6px 0 0 var(--f2); color: #2B2420; font: 600 16px/1 var(--font-pixel), var(--font-mono);
+    }
+    .fl b { padding: 3px 5px; border-radius: 1px; background: rgba(255,255,255,.85); font-weight: 700; color: #1B1712; }
+    
+    .info { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 12px 14px; }
+    .info h2 { margin: 0; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .desc { margin: 0; font: 400 12px/1.4 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+    
+    .stats { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+    .stat {
+      display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: 2px;
+      background: var(--paper); border: 1px solid var(--ink); font: 400 11.5px/1 var(--font-mono); color: var(--ink);
+    }
+    .stat::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: #8A867E; }
+    .stat.ok::before { background: #2C8A52; }
+    .stat.busy::before { background: #2F6FD8; }
+    .stat.wait::before { background: var(--clay); }
+    .stat.locked { border-color: var(--clay); color: var(--clay); font-weight: 600; }
+    .stat.unlocked { border-color: #2C8A52; color: #2C8A52; font-weight: 600; }
+
+    .open { margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--clay); }
+
+    /* Reader View (Hidden by default) */
+    #readerView { display: none; height: calc(100vh - 61px); }
+    .reader-layout { display: flex; height: 100%; overflow: hidden; width: 100%; }
+
+    /* Hierarchical Tree (Matching Image #3) */
+    .reader-side {
       width: 280px; flex: none; background: var(--paper-2); border-right: var(--border);
       display: flex; flex-direction: column; height: 100%; z-index: 50; transition: transform .2s ease;
     }
-    .sidebar-head {
-      padding: 16px; border-bottom: var(--border); display: flex; align-items: center; justify-content: space-between;
+    .side-back {
+      padding: 12px 14px; border-bottom: var(--border); display: flex; align-items: center; justify-content: space-between;
+      background: var(--paper);
     }
-    .brand { font-family: var(--font-pixel); font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
-    .side-acts { display: flex; align-items: center; gap: 6px; }
-    .icon-btn {
-      background: transparent; border: 1.5px solid var(--ink); border-radius: 4px; padding: 4px 8px;
-      font: 600 12px var(--font-mono); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+    .side-proj-name { font: 700 13px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+    .side-search { padding: 10px 14px; border-bottom: var(--border); }
+    .side-search input {
+      width: 100%; padding: 7px 10px; background: var(--paper); border: 1.5px solid var(--ink);
+      font: 500 12.5px var(--font-body); color: var(--ink); border-radius: 3px; outline: none;
     }
-    .icon-btn:hover { background: var(--ink); color: var(--paper); }
 
-    .search-box { padding: 12px 16px; border-bottom: var(--border); }
-    .search-in {
-      width: 100%; padding: 8px 12px; background: var(--paper); border: 1.5px solid var(--ink);
-      font: 500 13px var(--font-body); color: var(--ink); border-radius: 4px; outline: none;
-    }
-    .search-in:focus { border-color: var(--clay); box-shadow: inset 0 0 0 1px var(--clay); }
+    .tree-scroll { flex: 1; overflow-y: auto; padding: 10px 8px; }
+    .tree-root { list-style: none; display: flex; flex-direction: column; gap: 2px; }
 
-    .tree { flex: 1; overflow-y: auto; padding: 12px 8px; list-style: none; }
-    .tree-item { margin-bottom: 2px; }
-    .tree-row {
-      display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px;
-      cursor: pointer; user-select: none; transition: background .1s; text-decoration: none; color: inherit;
+    .node-row {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 3px;
+      cursor: pointer; user-select: none; transition: background .1s; color: inherit; text-decoration: none;
     }
-    .tree-row:hover { background: var(--paper-3); }
-    .tree-row.active { background: var(--ink); color: var(--paper); }
-    .tree-toggle {
-      width: 16px; height: 16px; border: 0; background: transparent; cursor: pointer;
-      display: grid; place-items: center; font-size: 9px; color: inherit; padding: 0;
+    .node-row:hover { background: var(--paper-3); }
+    .node-row.active { background: var(--ink); color: var(--paper); }
+    .node-toggle {
+      width: 16px; height: 16px; flex: none; border: 0; background: transparent; cursor: pointer;
+      display: grid; place-items: center; font-size: 11px; color: inherit; padding: 0;
     }
-    .tree-icon { flex: none; display: grid; place-items: center; width: 18px; height: 18px; font-size: 14px; }
-    .tree-title { flex: 1; font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .node-icon { flex: none; display: grid; place-items: center; width: 18px; height: 18px; }
+    .node-title { flex: 1; font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* Reader Main */
-    .main { flex: 1; height: 100%; overflow-y: auto; display: flex; flex-direction: column; position: relative; }
-    .topbar {
+    /* Children indentation (Induk & Anak matching Image #3) */
+    .node-children {
+      list-style: none; padding-left: 18px; margin-left: 8px;
+      border-left: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+      display: flex; flex-direction: column; gap: 2px; margin-top: 2px;
+    }
+    .node-children[hidden] { display: none; }
+
+    /* Reader Main Panel */
+    .reader-main { flex: 1; height: 100%; overflow-y: auto; position: relative; }
+    .reader-top {
       position: sticky; top: 0; z-index: 30; background: var(--paper); border-bottom: 1.5px solid color-mix(in srgb, var(--ink) 15%, transparent);
       padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px);
     }
-    .nav-left { display: flex; align-items: center; gap: 12px; }
-    .menu-toggle { display: none; }
-    .breadcrumb { font: 500 12.5px var(--font-mono); color: var(--muted); display: flex; align-items: center; gap: 6px; }
-    .bc-item { cursor: pointer; color: var(--muted); text-decoration: none; }
-    .bc-item:hover { color: var(--ink); text-decoration: underline; }
-    .bc-sep { opacity: 0.5; }
-    .bc-cur { color: var(--ink); font-weight: 600; }
+    .r-breadcrumb { font: 500 12.5px var(--font-mono); color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .r-bc-link { cursor: pointer; color: var(--muted); text-decoration: none; }
+    .r-bc-link:hover { color: var(--ink); text-decoration: underline; }
+    .r-bc-sep { opacity: 0.5; }
+    .r-bc-cur { color: var(--ink); font-weight: 600; }
 
-    .content-canvas { max-width: 860px; width: 100%; margin: 0 auto; padding: 0 32px 80px; flex: 1; }
-    
-    /* Cover & Header */
-    .cover-wrap { width: 100%; height: 220px; overflow: hidden; margin-bottom: 24px; border-bottom: var(--border); }
-    .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .note-header { position: relative; margin-bottom: 32px; padding-top: 16px; }
-    .has-cover .note-header { margin-top: -60px; }
-    .page-icon {
+    .reader-canvas { max-width: 860px; width: 100%; margin: 0 auto; padding: 0 32px 80px; }
+    .cover-box { width: 100%; height: 220px; overflow: hidden; margin-bottom: 24px; border-bottom: var(--border); }
+    .cover-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .has-cover .reader-header { margin-top: -60px; }
+    .reader-header { position: relative; margin-bottom: 32px; padding-top: 16px; }
+    .page-icon-badge {
       width: 72px; height: 72px; background: var(--paper); border: var(--border); box-shadow: var(--shadow);
       display: grid; place-items: center; margin-bottom: 16px; border-radius: 4px;
     }
-    .page-title { font-family: var(--font-pixel); font-size: 36px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
+    .reader-title { font-family: var(--font-pixel); font-size: 36px; font-weight: 700; line-height: 1.2; }
 
-    /* Blocks Formatting */
+    /* Block Renderer */
     .nb-doc { display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.65; }
-    .nb-h1 { font-family: var(--font-pixel); font-size: 28px; font-weight: 700; margin-top: 24px; margin-bottom: 4px; line-height: 1.25; }
-    .nb-h2 { font-family: var(--font-pixel); font-size: 22px; font-weight: 700; margin-top: 18px; margin-bottom: 4px; line-height: 1.3; }
+    .nb-h1 { font-family: var(--font-pixel); font-size: 28px; font-weight: 700; margin-top: 24px; margin-bottom: 4px; }
+    .nb-h2 { font-family: var(--font-pixel); font-size: 22px; font-weight: 700; margin-top: 18px; margin-bottom: 4px; }
     .nb-h3 { font-family: var(--font-pixel); font-size: 18px; font-weight: 700; margin-top: 14px; margin-bottom: 2px; }
     .nb-p { margin: 2px 0; }
-    
     .nb-ul, .nb-ol { display: flex; align-items: flex-start; gap: 10px; margin: 3px 0; }
     .nb-bullet { flex: none; width: 6px; height: 6px; background: var(--ink); border-radius: 50%; margin-top: 9px; }
     .nb-num { flex: none; font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--muted); min-width: 20px; margin-top: 2px; }
-
     .nb-todo { display: flex; align-items: flex-start; gap: 10px; margin: 3px 0; }
     .nb-check {
       flex: none; width: 17px; height: 17px; border: 2px solid var(--ink); border-radius: 3px;
@@ -154,14 +239,12 @@
     .nb-todo.done .nb-check { background: var(--clay); border-color: var(--clay); color: #fff; }
     .nb-todo.done .nb-check::after { content: "✓"; font-size: 12px; font-weight: 800; line-height: 1; }
     .nb-todo.done .nb-todo-text { text-decoration: line-through; color: var(--muted); }
-
-    .nb-quote { border-left: 3px solid var(--clay); padding: 4px 0 4px 16px; font-style: italic; color: var(--ink); margin: 6px 0; }
+    .nb-quote { border-left: 3px solid var(--clay); padding: 4px 0 4px 16px; font-style: italic; margin: 6px 0; }
     .nb-callout {
       background: var(--paper-2); border: var(--border); box-shadow: var(--shadow);
       padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; margin: 8px 0; border-radius: 3px;
     }
     .nb-callout-icon { flex: none; width: 22px; height: 22px; background: var(--clay); color: #fff; display: grid; place-items: center; font: 700 13px/1 var(--font-mono); border-radius: 2px; }
-
     .nb-hr { border: 0; border-top: 2px dashed var(--muted); margin: 20px 0; opacity: 0.6; }
 
     /* Code block */
@@ -198,69 +281,159 @@
     .nb-embed-link { color: var(--clay); text-decoration: none; font-weight: 600; }
     .nb-embed-link:hover { text-decoration: underline; }
 
-    /* Image Block */
-    .nb-img-fig { margin: 12px 0; max-width: 100%; }
+    /* Image Block (No broken [5]!) */
+    .nb-img-fig { margin: 14px 0; max-width: 100%; }
     .nb-img-fig img { max-width: 100%; height: auto; border: var(--border); border-radius: 3px; display: block; background: var(--paper-2); }
-    .nb-img-cap { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .nb-img-cap { font: 500 12.5px var(--font-mono); color: var(--muted); margin-top: 6px; }
 
-    /* Inline */
-    a { color: var(--clay); text-decoration: underline; }
-    code { font-family: var(--font-mono); font-size: 0.9em; background: var(--paper-2); border: 1px solid var(--border); padding: 1px 4px; border-radius: 2px; }
-    mark { background: color-mix(in srgb, var(--clay) 25%, var(--paper)); color: inherit; padding: 1px 3px; }
+    /* Password Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 100;
+      display: grid; place-items: center; padding: 16px;
+    }
+    .modal-overlay[hidden] { display: none; }
+    .pass-dialog {
+      width: 100%; max-width: 420px; background: var(--paper); border: var(--border);
+      box-shadow: 6px 6px 0 var(--ink); border-radius: 4px; padding: 24px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .pass-head { display: flex; align-items: center; gap: 10px; }
+    .pass-title { font-family: var(--font-pixel); font-size: 22px; font-weight: 700; }
+    .pass-desc { font: 400 13px/1.4 var(--font-mono); color: var(--muted); }
+    .pass-input {
+      width: 100%; padding: 10px 12px; border: var(--border); background: var(--paper-2);
+      font: 600 15px var(--font-mono); color: var(--ink); border-radius: 3px; outline: none;
+    }
+    .pass-input:focus { border-color: var(--clay); box-shadow: inset 0 0 0 2px var(--clay); }
+    .pass-err { color: #E0483E; font: 600 12px var(--font-mono); display: none; }
+    .pass-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 
-    /* Mobile Responsive */
-    @media (max-width: 768px) {
-      .menu-toggle { display: inline-flex; }
-      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; transform: translateX(-100%); width: 85vw; max-width: 320px; box-shadow: 4px 0 0 var(--ink); }
-      .sidebar.open { transform: translateX(0); }
-      .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 45; display: none; }
-      .sidebar.open + .sidebar-backdrop { display: block; }
-      .content-canvas { padding: 0 16px 60px; }
-      .page-title { font-size: 28px; }
+    /* Responsive */
+    @media (max-width: 860px) {
+      .site { grid-template-columns: minmax(0, 1fr); }
+      .tower3d { position: static; }
+      .stage { height: min(68vh, 460px); min-height: 360px; }
+      .reader-side { position: fixed; top: 0; bottom: 0; left: 0; transform: translateX(-100%); width: 85vw; max-width: 320px; box-shadow: 4px 0 0 var(--ink); }
+      .reader-side.open { transform: translateX(0); }
+      .menu-btn-mobile { display: inline-flex !important; }
+      .reader-canvas { padding: 0 16px 60px; }
+      .reader-title { font-size: 28px; }
       .nb-bm-thumb { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-head">
-        <span class="brand">NOTES</span>
-        <div class="side-acts">
-          <button type="button" class="icon-btn" id="themeBtn" title="Toggle dark mode">Theme</button>
-        </div>
-      </div>
-      <div class="search-box">
-        <input type="search" class="search-in" id="searchIn" placeholder="Search notes..." autocomplete="off">
-      </div>
-      <ul class="tree" id="noteTree"></ul>
-    </aside>
-    <div class="sidebar-backdrop" id="backdrop"></div>
+  <header class="hub-header">
+    <div class="brand-group">
+      <span class="brand-text">AGENT OFFICE · NOTES</span>
+    </div>
+    <div class="hub-acts">
+      <button type="button" class="btn" id="themeBtn" title="Toggle dark mode">Theme</button>
+    </div>
+  </header>
 
-    <main class="main" id="main">
-      <header class="topbar">
-        <div class="nav-left">
-          <button type="button" class="icon-btn menu-toggle" id="menuBtn">☰ Menu</button>
-          <nav class="breadcrumb" id="breadcrumb"></nav>
-        </div>
-      </header>
+  <!-- VIEW 1: THE TOWER & OFFICES HUB (Matching offices.html) -->
+  <main id="hubView">
+    <div class="hub-intro">
+      <span class="hub-label">OFFICES</span>
+      <h1 class="hub-title">Your Notes Tower</h1>
+      <p class="hub-sub">Every project is one floor: open a floor to read that collection. Protected notes remember your password.</p>
+    </div>
 
-      <article class="content-canvas" id="canvas">
-        <div id="coverBox" class="cover-wrap" style="display:none;"></div>
-        <div class="note-header" id="noteHeader">
-          <div class="page-icon" id="pageIcon">📝</div>
-          <h1 class="page-title" id="pageTitle">Untitled</h1>
+    <div class="site">
+      <!-- Exact 3D Tower from offices.html -->
+      <div class="tower3d" id="tower">
+        <div class="stage">
+          <div class="tlabel" hidden></div>
         </div>
-        <div class="nb-doc" id="blocksBody"></div>
-      </article>
-    </main>
+        <p class="thint">Drag to turn the building · click a floor to open</p>
+      </div>
+
+      <!-- Floor Cards List (Without local paths) -->
+      <div class="floors-container">
+        <ol class="floors" id="floorsList" reversed></ol>
+      </div>
+    </div>
+  </main>
+
+  <!-- VIEW 2: NOTE READER VIEW (Hierarchical Tree + Notion Blocks) -->
+  <div id="readerView">
+    <div class="reader-layout">
+      <!-- Hierarchical Sidebar Tree (Matching Image #3) -->
+      <aside class="reader-side" id="readerSide">
+        <div class="side-back">
+          <button type="button" class="btn" id="backToHubBtn">← All Notes</button>
+          <span class="side-proj-name" id="sideProjName">Project</span>
+        </div>
+        <div class="side-search">
+          <input type="search" id="sideSearchIn" placeholder="Search notes..." autocomplete="off">
+        </div>
+        <div class="tree-scroll">
+          <ul class="tree-root" id="treeRoot"></ul>
+        </div>
+      </aside>
+
+      <!-- Main Reader Panel -->
+      <section class="reader-main" id="readerMain">
+        <header class="reader-top">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button type="button" class="btn menu-btn-mobile" id="sideMenuBtn" style="display:none;">☰ Menu</button>
+            <nav class="r-breadcrumb" id="rBreadcrumb"></nav>
+          </div>
+        </header>
+
+        <article class="reader-canvas" id="readerCanvas">
+          <div id="coverBox" class="cover-box" style="display:none;"></div>
+          <div class="reader-header" id="rHeader">
+            <div class="page-icon-badge" id="rPageIcon">📝</div>
+            <h1 class="reader-title" id="rTitle">Untitled</h1>
+          </div>
+          <div class="nb-doc" id="rBlocks"></div>
+        </article>
+      </section>
+    </div>
   </div>
 
-  <script type="module">
-    const $ = (id) => document.getElementById(id);
+  <!-- PASSWORD MODAL DIALOG -->
+  <div class="modal-overlay" id="passModal" hidden>
+    <form class="pass-dialog" id="passForm" autocomplete="off">
+      <div class="pass-head">
+        <i class="em" data-emote="alert" data-size="md"></i>
+        <h2 class="pass-title" id="passDialogTitle">Password Required</h2>
+      </div>
+      <p class="pass-desc" id="passDialogDesc">This collection is password-protected. Enter the password to unlock.</p>
+      <input type="password" class="pass-input" id="passInput" placeholder="Enter password..." required autofocus>
+      <div class="pass-err" id="passErr">Password salah. Silakan coba lagi.</div>
+      <div class="pass-actions">
+        <button type="button" class="btn" id="passCancelBtn">Cancel</button>
+        <button type="submit" class="btn primary">Unlock Notes</button>
+      </div>
+    </form>
+  </div>
 
-    let notes = [];
-    let currentId = null;
+  <!-- APPLICATION LOGIC & REAL TOWER IMPORT -->
+  <script type="module">
+    import { createTower } from './js/tower.js';
+    import { themeById } from './js/themes.js';
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+    // SHA-256 helper
+    async function sha256(text) {
+      const buffer = new TextEncoder().encode(text);
+      const hash = await crypto.subtle.digest('SHA-256', buffer);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // State
+    let projects = [];
+    let currentProject = null;
+    let currentNotes = [];
+    let currentNoteId = null;
+    let pendingUnlockProject = null;
+    let tower = null;
+    let lit = null;
+    const foldedParents = new Set();
 
     // Theme toggle
     const themeBtn = $('themeBtn');
@@ -270,90 +443,302 @@
       localStorage.setItem('notes-theme', isDark ? 'dark' : 'light');
     };
 
-    // Mobile sidebar toggle
-    const menuBtn = $('menuBtn');
-    const sidebar = $('sidebar');
-    const backdrop = $('backdrop');
-    const toggleMenu = (open) => sidebar.classList.toggle('open', open);
-    menuBtn.onclick = () => toggleMenu(true);
-    backdrop.onclick = () => toggleMenu(false);
+    const setLit = (id) => {
+      lit = id;
+      document.querySelectorAll('.floor').forEach(li => li.classList.toggle('lit', li.dataset.id === id));
+    };
 
-    // Load data
-    async function init() {
+    // Load Projects Hub
+    async function loadHub() {
       try {
-        const res = await fetch('notes.json');
-        notes = await res.json();
-        renderTree();
-        
-        // Deep linking via hash
-        const hashId = location.hash.replace(/^#/, '');
-        const target = notes.find(n => n.id === hashId) || notes[0];
-        if (target) selectNote(target.id);
-      } catch (err) {
-        $('blocksBody').innerHTML = `<p style="color:var(--clay);">Failed to load notes: ${err.message}</p>`;
+        const res = await fetch('data/projects.json');
+        projects = await res.json();
+      } catch {
+        projects = [
+          {
+            id: "gdgoc-itb", url: "#gdgoc-itb", name: "GDGoC ITB 2026",
+            floor: 5, theme: "cabin", busy: 1, connected: true, agents: 3, repos: 1,
+            desc: "Hackathon notes, persiapan overseas, pembagian abstrak & riset",
+            passwordHash: "ea456ee52c2df3b784c50efdbe0dd69faf84f1fc63a61e8948b2113b392baa2f",
+            dataFile: "data/gdgoc-itb.json"
+          }
+        ];
+      }
+
+      renderFloors();
+      initExactTower();
+
+      // Check URL hash on startup: #project-id/note-id or #project-id
+      const hash = location.hash.replace(/^#/, '');
+      if (hash) {
+        const [projId, noteId] = hash.split('/');
+        const p = projects.find(x => x.id === projId);
+        if (p) attemptOpenProject(p, noteId);
       }
     }
 
-    // Tree Rendering
-    function renderTree(filter = '') {
-      const tree = $('noteTree');
-      tree.innerHTML = '';
-      const q = filter.trim().toLowerCase();
-      
-      const filtered = q
-        ? notes.filter(n => n.title.toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q))
-        : notes;
+    // Exact 3D Tower from tower.js
+    function initExactTower() {
+      const stage = $('tower');
+      try {
+        tower = createTower(stage.querySelector('.stage'), {
+          onOpen: (o) => {
+            const p = projects.find(x => x.url === o.url || x.id === o.id || x.name === o.name);
+            if (p) attemptOpenProject(p);
+          },
+          onHover: (o) => {
+            const p = projects.find(x => x.url === o?.url || x.name === o?.name);
+            setLit(p?.id ?? null);
+          }
+        });
 
-      filtered.forEach(note => {
+        // Feed projects to tower (ascending order from ground floor to top)
+        const towerFloors = [...projects].sort((a, b) => (a.floor || 0) - (b.floor || 0));
+        tower.update(towerFloors);
+      } catch (err) {
+        console.warn('Could not load 3D tower:', err);
+      }
+    }
+
+    // Render Floor Cards (NO local paths shown!)
+    function renderFloors() {
+      const list = $('floorsList');
+      list.innerHTML = '';
+
+      // Top floor first, as in the building
+      const sorted = [...projects].sort((a, b) => (b.floor || 0) - (a.floor || 0));
+
+      sorted.forEach((p, idx) => {
+        const th = themeById(p.theme);
+        const isUnlocked = !p.passwordHash || localStorage.getItem(`unlocked_notes_${p.id}`) === 'true';
+        const number = p.floor || (sorted.length - idx);
+
         const li = document.createElement('li');
-        li.className = 'tree-item';
-        
-        const row = document.createElement('div');
-        row.className = `tree-row ${note.id === currentId ? 'active' : ''}`;
-        row.onclick = () => { selectNote(note.id); toggleMenu(false); };
+        li.className = 'floor';
+        li.dataset.id = p.id;
+        li.dataset.url = p.url;
 
-        const iconEl = document.createElement('span');
-        iconEl.className = 'tree-icon';
-        if (note.icon?.startsWith('em:')) {
-          const em = document.createElement('i');
-          em.className = 'em';
-          em.dataset.emote = note.icon.slice(3);
-          em.dataset.size = 'sm';
-          iconEl.append(em);
-        } else {
-          iconEl.textContent = note.icon || '📄';
-        }
+        li.innerHTML = `
+          <a href="${p.url}" style="--f0:${esc(th.swatch[0])};--f2:${esc(th.swatch[2])}">
+            <span class="fl"><b>${number}</b></span>
+            <div class="info">
+              <h2>
+                <span>${esc(p.name)}</span>
+                <i class="em" data-emote="${p.busy ? 'typing' : p.connected ? 'idle' : 'sleepy'}" data-size="sm" aria-hidden="true"></i>
+              </h2>
+              <p class="desc">${esc(p.desc || '')}</p>
+              <span class="stats">
+                <span class="stat">${p.agents || 0} agents</span>
+                <span class="stat ${p.busy ? 'busy' : ''}">${p.busy ? `${p.busy} working` : 'all idle'}</span>
+                <span class="stat ${p.connected ? 'ok' : 'wait'}">${p.connected ? 'connected' : 'no session'}</span>
+                <span class="stat">${esc(th.name)}</span>
+                ${p.passwordHash
+                  ? `<span class="stat ${isUnlocked ? 'unlocked' : 'locked'}">${isUnlocked ? 'Unlocked ✓' : 'Password protected'}</span>`
+                  : '<span class="stat">Public</span>'}
+              </span>
+              <span class="open">Open notes →</span>
+            </div>
+          </a>
+        `;
 
-        const titleEl = document.createElement('span');
-        titleEl.className = 'tree-title';
-        titleEl.textContent = note.title || 'Untitled';
+        li.querySelector('a').onclick = (e) => {
+          e.preventDefault();
+          attemptOpenProject(p);
+        };
+        li.onmouseenter = () => setLit(p.id);
+        li.onmouseleave = () => setLit(null);
 
-        row.append(iconEl, titleEl);
-        li.append(row);
-        tree.append(li);
+        list.append(li);
       });
     }
 
-    $('searchIn').oninput = (e) => renderTree(e.target.value);
+    // Attempt Open Project with Password Guard
+    async function attemptOpenProject(proj, targetNoteId = null) {
+      const isUnlocked = !proj.passwordHash || localStorage.getItem(`unlocked_notes_${proj.id}`) === 'true';
+      if (isUnlocked) {
+        openProjectReader(proj, targetNoteId);
+      } else {
+        // Show password dialog
+        pendingUnlockProject = { proj, targetNoteId };
+        $('passDialogTitle').textContent = `Password: ${proj.name}`;
+        $('passDialogDesc').textContent = `Collection "${proj.name}" is password-protected. Enter password to view.`;
+        $('passInput').value = '';
+        $('passErr').style.display = 'none';
+        $('passModal').hidden = false;
+        setTimeout(() => $('passInput').focus(), 50);
+      }
+    }
+
+    // Password Form Submit
+    $('passForm').onsubmit = async (e) => {
+      e.preventDefault();
+      if (!pendingUnlockProject) return;
+      const { proj, targetNoteId } = pendingUnlockProject;
+      const entered = $('passInput').value;
+      const hashed = await sha256(entered);
+
+      if (hashed === proj.passwordHash) {
+        // Remember password in localStorage so never asked again!
+        localStorage.setItem(`unlocked_notes_${proj.id}`, 'true');
+        $('passModal').hidden = true;
+        renderFloors(); // update chip
+        openProjectReader(proj, targetNoteId);
+      } else {
+        $('passErr').style.display = 'block';
+        $('passInput').select();
+      }
+    };
+    $('passCancelBtn').onclick = () => { $('passModal').hidden = true; pendingUnlockProject = null; };
+
+    // Open Project Reader (View 2)
+    async function openProjectReader(proj, targetNoteId = null) {
+      currentProject = proj;
+      $('hubView').style.display = 'none';
+      $('readerView').style.display = 'block';
+      $('sideProjName').textContent = proj.name;
+
+      try {
+        const file = proj.dataFile || `data/${proj.id}.json`;
+        const res = await fetch(file);
+        currentNotes = await res.json();
+      } catch (err) {
+        currentNotes = [];
+      }
+
+      renderHierarchicalTree();
+
+      // Open target note or first note
+      const noteToOpen = targetNoteId
+        ? currentNotes.find(n => n.id === targetNoteId)
+        : currentNotes.find(n => !n.parent) || currentNotes[0];
+
+      if (noteToOpen) selectNote(noteToOpen.id);
+    }
+
+    // Back to Hub
+    $('backToHubBtn').onclick = () => {
+      $('readerView').style.display = 'none';
+      $('hubView').style.display = 'block';
+      currentProject = null;
+      location.hash = '';
+      document.title = 'Notes · Arya Refman';
+    };
+
+    $('sideMenuBtn').onclick = () => $('readerSide').classList.toggle('open');
+
+    // ---- HIERARCHICAL TREE (Induk & Anak matching Image #3) ----
+    function renderHierarchicalTree(filter = '') {
+      const tree = $('treeRoot');
+      tree.innerHTML = '';
+      const q = filter.trim().toLowerCase();
+
+      // Map parent -> children
+      const byParent = new Map();
+      currentNotes.forEach(n => {
+        const pid = n.parent || null;
+        if (!byParent.has(pid)) byParent.set(pid, []);
+        byParent.get(pid).push(n);
+      });
+
+      // Filtered view
+      if (q) {
+        const matches = currentNotes.filter(n => n.title.toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q));
+        matches.forEach(note => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <div class="node-row ${note.id === currentNoteId ? 'active' : ''}">
+              <span class="node-icon">${renderIconBadge(note.icon, 'sm')}</span>
+              <span class="node-title">${esc(note.title || 'Untitled')}</span>
+            </div>
+          `;
+          li.querySelector('.node-row').onclick = () => selectNote(note.id);
+          tree.append(li);
+        });
+        return;
+      }
+
+      // Recursive tree builder
+      function buildBranch(parentId, container) {
+        const children = byParent.get(parentId) || [];
+        children.forEach(note => {
+          const hasKids = byParent.has(note.id) && byParent.get(note.id).length > 0;
+          const isFolded = foldedParents.has(note.id);
+
+          const li = document.createElement('li');
+          const row = document.createElement('div');
+          row.className = `node-row ${note.id === currentNoteId ? 'active' : ''}`;
+
+          // Toggle arrow (▾ / ▸)
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'node-toggle';
+          toggle.textContent = hasKids ? (isFolded ? '▸' : '▾') : '';
+          if (hasKids) {
+            toggle.onclick = (e) => {
+              e.stopPropagation();
+              if (foldedParents.has(note.id)) foldedParents.delete(note.id);
+              else foldedParents.add(note.id);
+              renderHierarchicalTree($('sideSearchIn').value);
+            };
+          }
+
+          // Icon
+          const iconSpan = document.createElement('span');
+          iconSpan.className = 'node-icon';
+          iconSpan.innerHTML = renderIconBadge(note.icon, 'sm');
+
+          // Title
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'node-title';
+          titleSpan.textContent = note.title || 'Untitled';
+
+          row.append(toggle, iconSpan, titleSpan);
+          row.onclick = () => selectNote(note.id);
+          li.append(row);
+
+          // Sub-children container (Indented!)
+          if (hasKids) {
+            const subUl = document.createElement('ul');
+            subUl.className = 'node-children';
+            if (isFolded) subUl.hidden = true;
+            buildBranch(note.id, subUl);
+            li.append(subUl);
+          }
+
+          container.append(li);
+        });
+      }
+
+      // Root level (parent is null)
+      buildBranch(null, tree);
+    }
+
+    $('sideSearchIn').oninput = (e) => renderHierarchicalTree(e.target.value);
+
+    function renderIconBadge(icon, size = 'sm') {
+      if (icon?.startsWith('em:')) {
+        return `<i class="em" data-emote="${icon.slice(3)}" data-size="${size}"></i>`;
+      }
+      return icon || (size === 'lg' ? '📝' : '📄');
+    }
 
     // Select Note
     function selectNote(id) {
-      const note = notes.find(n => n.id === id);
+      const note = currentNotes.find(n => n.id === id);
       if (!note) return;
-      currentId = id;
-      location.hash = id;
-      document.title = `${note.title || 'Untitled'} · Arya Refman Notes`;
+      currentNoteId = id;
+      if (currentProject) location.hash = `${currentProject.id}/${id}`;
+      document.title = `${note.title || 'Untitled'} · ${currentProject?.name || 'Notes'}`;
 
-      // Update tree active
-      document.querySelectorAll('.tree-row').forEach(r => r.classList.remove('active'));
-      renderTree($('searchIn').value);
+      // Update sidebar active
+      renderHierarchicalTree($('sideSearchIn').value);
 
       // Breadcrumb
       updateBreadcrumb(note);
 
-      // Cover
+      // Cover banner
       const coverBox = $('coverBox');
-      const canvas = $('canvas');
+      const canvas = $('readerCanvas');
       if (note.cover) {
         coverBox.style.display = 'block';
         coverBox.innerHTML = `<img src="${note.cover}" alt="">`;
@@ -365,44 +750,51 @@
       }
 
       // Page Icon
-      const iconBox = $('pageIcon');
-      if (note.icon?.startsWith('em:')) {
-        iconBox.innerHTML = `<i class="em" data-emote="${note.icon.slice(3)}" data-size="lg"></i>`;
-      } else {
-        iconBox.textContent = note.icon || '📝';
-      }
-
-      // Title
-      $('pageTitle').textContent = note.title || 'Untitled';
+      $('rPageIcon').innerHTML = renderIconBadge(note.icon, 'lg');
+      $('rTitle').textContent = note.title || 'Untitled';
 
       // Blocks
-      renderBlocks(note.blocks || []);
-      $('main').scrollTop = 0;
+      renderDocBlocks(note.blocks || []);
+      $('readerMain').scrollTop = 0;
+      $('readerSide').classList.remove('open');
     }
 
     function updateBreadcrumb(note) {
-      const bc = $('breadcrumb');
+      const bc = $('rBreadcrumb');
       bc.innerHTML = '';
       const parts = [];
       let cur = note;
       while (cur) {
         parts.unshift(cur);
-        cur = cur.parent ? notes.find(n => n.id === cur.parent) : null;
+        cur = cur.parent ? currentNotes.find(n => n.id === cur.parent) : null;
+      }
+
+      // Project Root
+      if (currentProject) {
+        const rootItem = document.createElement('span');
+        rootItem.className = 'r-bc-link';
+        rootItem.textContent = currentProject.name;
+        rootItem.onclick = () => $('backToHubBtn').click();
+        bc.append(rootItem);
+        const sep = document.createElement('span');
+        sep.className = 'r-bc-sep';
+        sep.textContent = '/';
+        bc.append(sep);
       }
 
       parts.forEach((p, i) => {
         if (i > 0) {
           const sep = document.createElement('span');
-          sep.className = 'bc-sep';
+          sep.className = 'r-bc-sep';
           sep.textContent = '/';
           bc.append(sep);
         }
         const item = document.createElement('span');
         if (i === parts.length - 1) {
-          item.className = 'bc-cur';
+          item.className = 'r-bc-cur';
           item.textContent = p.title || 'Untitled';
         } else {
-          item.className = 'bc-item';
+          item.className = 'r-bc-link';
           item.textContent = p.title || 'Untitled';
           item.onclick = () => selectNote(p.id);
         }
@@ -410,10 +802,10 @@
       });
     }
 
-    // Render Blocks
-    function renderBlocks(blocks) {
-      const body = $('blocksBody');
-      body.innerHTML = '';
+    // Render Blocks with Image [5] fix & Notion style cards
+    function renderDocBlocks(blocks) {
+      const container = $('rBlocks');
+      container.innerHTML = '';
 
       blocks.forEach(b => {
         const el = document.createElement('div');
@@ -433,7 +825,7 @@
           case 'todo':
             const check = document.createElement('span');
             check.className = 'nb-check';
-            check.onclick = () => { el.classList.toggle('done'); };
+            check.onclick = () => el.classList.toggle('done');
             const txt = document.createElement('div');
             txt.className = 'nb-todo-text';
             txt.innerHTML = b.text;
@@ -444,9 +836,7 @@
           case 'callout':
             el.innerHTML = `<span class="nb-callout-icon">!</span><div>${b.text}</div>`;
             break;
-          case 'divider':
-            el.className = 'nb-hr';
-            break;
+          case 'divider': el.className = 'nb-hr'; break;
           case 'code':
             const box = document.createElement('div');
             box.className = 'nb-code-box';
@@ -467,7 +857,10 @@
           case 'image':
             const fig = document.createElement('figure');
             fig.className = 'nb-img-fig';
-            fig.innerHTML = `<img src="${b.src}" alt="${b.text || ''}" loading="lazy">${b.text ? `<figcaption class="nb-img-cap">${b.text}</figcaption>` : ''}`;
+            fig.innerHTML = `
+              <img src="${b.src}" alt="${esc(b.text || '')}" loading="lazy">
+              ${b.text ? `<figcaption class="nb-img-cap">${esc(b.text)}</figcaption>` : ''}
+            `;
             el.append(fig);
             break;
           case 'bookmark':
@@ -480,8 +873,8 @@
             card.rel = 'noopener noreferrer';
             card.innerHTML = `
               <div class="nb-bm-content">
-                <div class="nb-bm-title">${b.title || b.url}</div>
-                ${b.description ? `<div class="nb-bm-desc">${b.description}</div>` : ''}
+                <div class="nb-bm-title">${esc(b.title || b.url)}</div>
+                ${b.description ? `<div class="nb-bm-desc">${esc(b.description)}</div>` : ''}
                 <div class="nb-bm-meta">
                   ${b.icon ? `<img src="${b.icon}" class="nb-bm-icon" alt="" onerror="this.remove()">` : ''}
                   <span class="nb-bm-host">${host}</span>
@@ -508,17 +901,11 @@
           default:
             el.innerHTML = b.text || '';
         }
-
-        body.append(el);
+        container.append(el);
       });
     }
 
-    window.addEventListener('hashchange', () => {
-      const hashId = location.hash.replace(/^#/, '');
-      if (hashId && hashId !== currentId) selectNote(hashId);
-    });
-
-    init();
+    loadHub();
   </script>
 </body>
 </html>
